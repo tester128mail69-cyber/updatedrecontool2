@@ -101,7 +101,16 @@ Key highlights:
 | **Scan Diffing** | Compare two scans to detect new findings |
 | **Continuous Monitoring** | Scheduled rescans with Slack, Discord, Telegram, and Webhook alerts |
 | **AI-Powered Validation** | Reduce false positives via OpenAI, Claude, Gemini, Ollama, or pattern-based validation |
-| **Bug Report Generation** | Auto-generate HackerOne, Bugcrowd, Markdown, and PDF reports |
+| **Bug Report Generation** | Auto-generate HackerOne, Bugcrowd, Markdown, HTML, JSON, CSV, and PDF reports |
+
+### New Features (v1.0.0)
+
+| Feature | Description |
+|---------|-------------|
+| **Proxy / Tor Support** | Route all traffic through HTTP, HTTPS, or SOCKS5 proxies. Auto-detect Tor at `socks5://127.0.0.1:9050` with `--tor`. Proxy list files with automatic rotation are supported. |
+| **Report Export** | Generate styled HTML, GitHub-flavored Markdown, JSON, and CSV reports via `godrecon report` or the `--output-format` flag on `scan`. |
+| **Scope Management** | Define in-scope targets (domains, IPs, CIDRs, wildcards) and exclusions via CLI (`--scope-file`), config (`scope.in_scope` / `scope.out_of_scope`), or programmatically via `ScopeManager`. |
+| **Python Packaging** | Full `pyproject.toml` with `setup.py` shim, `MANIFEST.in`, PyPI classifiers, and optional dependency groups (`[dev]`, `[reports]`). |
 
 ### Dashboard Features (70)
 
@@ -364,8 +373,12 @@ godrecon schedules add --target example.com --interval daily
 | `--cache-poisoning/--no-cache-poisoning` | Enable cache poisoning scanner (default: on) | `--cache-poisoning` |
 | `--js-secrets/--no-js-secrets` | Enable JS secrets scanning (default: on) | `--js-secrets` |
 | `--git-dork` | Enable GitHub/GitLab dorking | `--git-dork` |
+| `--proxy` | Route traffic through a proxy URL (http/socks5) | `--proxy socks5://127.0.0.1:1080` |
+| `--tor` | Route traffic through Tor (`socks5://127.0.0.1:9050`) | `--tor` |
+| `--scope-file` | Load scope rules from file (`+` in-scope, `-` out-of-scope) | `--scope-file scope.txt` |
 | `--output` / `-o` | Output file path | `-o report.html` |
 | `--format` / `-f` | Output format: `json`, `csv`, `html`, `pdf`, `md` | `-f html` |
+| `--output-format` | Auto-generate a report after scan: `html`, `md`, `json`, `csv` | `--output-format html` |
 | `--threads` | Concurrency level (default: 50) | `--threads 100` |
 | `--min-confidence` | Minimum confidence threshold 0.0–1.0 (default: 0.5) | `--min-confidence 0.7` |
 | `--verify/--no-verify` | Cross-validation pass | `--verify` |
@@ -378,8 +391,11 @@ godrecon schedules add --target example.com --interval daily
 godrecon api --host 0.0.0.0 --port 8000
 godrecon api --api-key your-strong-api-key-here
 
-# Generate bug bounty report from scan JSON
-godrecon report scan.json --format hackerone -o report
+# Generate a report from a scan result JSON file
+godrecon report scan.json --format html -o report
+godrecon report scan.json --format md -o report
+godrecon report scan.json --format csv -o findings
+godrecon report scan.json --format hackerone -o h1_report
 
 # Compare two scans
 godrecon diff scan1.json scan2.json
@@ -596,6 +612,20 @@ notifications:
 plugins:
   enabled: true
   plugin_dir: "~/.godrecon/plugins"
+
+# Proxy / Tor routing
+proxy:
+  enabled: false
+  proxy_url: ""           # e.g. socks5://127.0.0.1:9050 or http://user:pass@host:port
+  proxy_list_file: ""     # Path to file with one proxy per line (enables rotation)
+  rotate: false           # Rotate through the proxy list
+  tor_mode: false         # Route through local Tor SOCKS5 proxy
+
+# Scope management
+scope:
+  in_scope: []            # Domains, IPs, CIDRs, *.wildcards
+  out_of_scope: []        # Regex patterns to exclude
+  scope_file: ""          # Path to scope file (lines prefixed with + or -)
 ```
 
 Copy `.env.example` to `.env` to set environment variable overrides:

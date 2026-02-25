@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +36,16 @@ app = typer.Typer(
 console = Console()
 err_console = Console(stderr=True)
 logger = get_logger(__name__)
+
+# Mapping from report format name to file extension
+_FORMAT_EXTENSIONS: dict = {
+    "html": ".html",
+    "htm": ".html",
+    "md": ".md",
+    "markdown": ".md",
+    "json": ".json",
+    "csv": ".csv",
+}
 
 _BANNER = r"""
  ██████╗  ██████╗ ██████╗ ██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗
@@ -76,6 +87,8 @@ def scan(
     threads: int = typer.Option(50, "--threads", help="Concurrency level"),
     timeout: int = typer.Option(10, "--timeout", help="Request timeout in seconds"),
     proxy: Optional[str] = typer.Option(None, "--proxy", help="Proxy URL (http/socks5)"),
+    tor: bool = typer.Option(False, "--tor", help="Route traffic through Tor (socks5://127.0.0.1:9050)"),
+    scope_file: Optional[str] = typer.Option(None, "--scope-file", help="Load scope rules from file (+ in-scope, - out-of-scope)"),
     silent: bool = typer.Option(False, "--silent", help="Minimal output"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output (DEBUG level logging)"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all output except errors (ERROR level logging)"),
@@ -100,6 +113,7 @@ def scan(
     js_secrets: bool = typer.Option(True, "--js-secrets/--no-js-secrets", help="Enable JS secrets scanning"),
     # Report options
     report_format: Optional[str] = typer.Option(None, "--report-format", help="Report format: json,html,markdown,pdf,hackerone,bugcrowd"),
+    output_format: Optional[str] = typer.Option(None, "--output-format", help="Auto-generate a report after scan: html, md, json, csv"),
     # New scan mode options
     scan_mode: str = typer.Option("standard", "--mode", "-m", help="Scan mode: quick, standard, deep, continuous"),
     ai_provider: str = typer.Option("pattern", "--ai-provider", help="AI validation provider: pattern, openai, anthropic, gemini, ollama"),
@@ -133,6 +147,9 @@ def scan(
     cfg.general.timeout = timeout
     if proxy:
         cfg.general.proxy = proxy
+    if tor:
+        cfg.proxy.enabled = True
+        cfg.proxy.tor_mode = True
     if output:
         cfg.general.output_dir = str(Path(output).parent)
 
@@ -203,6 +220,10 @@ def scan(
         cfg.mobile_api.apk_paths = [mobile_apk]
         cfg.modules.mobile_api = True
 
+    # Scope file
+    if scope_file:
+        cfg.scope.scope_file = scope_file
+
     # AI provider config
     cfg.ai_validator.provider = ai_provider
 
@@ -231,7 +252,7 @@ def scan(
         )
 
     # Run the async scan
-    asyncio.run(_run_scan(target, cfg, output, fmt, silent, resume))
+    asyncio.run(_run_scan(target, cfg, output, fmt, silent, resume, output_format))
 
 
 async def _run_scan(
@@ -241,6 +262,7 @@ async def _run_scan(
     fmt: str,
     silent: bool,
     resume: Optional[str] = None,
+    output_format: Optional[str] = None,
 ) -> None:
     """Internal async wrapper for the scan engine."""
     from godrecon.core.engine import ScanEngine
@@ -297,6 +319,26 @@ async def _run_scan(
         _write_output(result, output, fmt)
         if not silent:
             console.print(f"\n[bold green]✓[/] Report saved to [bold]{output}[/]")
+
+    # Auto-generate report in the requested format after scan
+    if output_format:
+        from godrecon.core.reporter import ReportGenerator
+        from godrecon.core.engine import ScanResult
+        assert isinstance(result, ScanResult)
+        data = {
+            "target": result.target,
+            "stats": result.stats,
+            "module_results": result.module_results,
+            "errors": result.errors,
+        }
+        _ext = _FORMAT_EXTENSIONS.get(output_format.lower(), f".{output_format}")
+        _report_path = f"{target.replace('/', '_')}_report{_ext}"
+        try:
+            ReportGenerator().generate(data, _report_path, output_format)
+            if not silent:
+                console.print(f"[bold green]✓[/] {output_format.upper()} report saved to [bold]{_report_path}[/]")
+        except ValueError as exc:
+            err_console.print(f"[red]{exc}[/]")
 
 
 def _display_results(result: object) -> None:  # type: ignore[type-arg]
@@ -657,20 +699,46 @@ def diff(
 def report(
     scan_file: str = typer.Argument(..., help="Path to scan result JSON file"),
     output: str = typer.Option("report", "--output", "-o", help="Output file path (without extension)"),
-    fmt: str = typer.Option("markdown", "--format", "-f", help="Report format: markdown, hackerone, bugcrowd"),
+    fmt: str = typer.Option("markdown", "--format", "-f", help="Report format: html, md, json, csv, hackerone, bugcrowd"),
+    scan_id: Optional[str] = typer.Option(None, "--scan-id", help="Scan ID (alias for the scan-file argument)"),
 ) -> None:
-    """Generate bug bounty report from scan results."""
-    import json
-    from godrecon.reporting.bug_report import BugReportGenerator
+    """Generate a report from scan results.
 
-    with open(scan_file) as f:
+    Supports HTML, Markdown, JSON, CSV as well as bug-bounty formats
+    (hackerone, bugcrowd).
+
+    Examples:
+
+        godrecon report scan.json --format html -o report
+
+        godrecon report scan.json --format md -o report
+
+        godrecon report scan.json --format csv -o findings
+    """
+    # --scan-id can be used as an alias for the positional scan_file
+    effective_file = scan_id or scan_file
+
+    with open(effective_file) as f:
         scan_data = json.load(f)
+
+    fmt_lower = fmt.lower()
+
+    # Structured report formats via ReportGenerator
+    if fmt_lower in ("html", "htm", "md", "markdown", "json", "csv"):
+        from godrecon.core.reporter import ReportGenerator
+        output_path = f"{output}{_FORMAT_EXTENSIONS.get(fmt_lower, f'.{fmt_lower}')}"
+        ReportGenerator().generate(scan_data, output_path, fmt_lower)
+        console.print(f"[green]Report saved → {output_path}[/]")
+        return
+
+    # Bug-bounty formats (hackerone / bugcrowd / markdown legacy)
+    from godrecon.reporting.bug_report import BugReportGenerator
 
     target = scan_data.get("target", "unknown")
     module_results = scan_data.get("module_results", {})
 
     all_findings = []
-    for module_name, module_result in module_results.items():
+    for module_result in module_results.values():
         if isinstance(module_result, dict):
             findings = module_result.get("findings", [])
         elif hasattr(module_result, "findings"):
@@ -680,13 +748,18 @@ def report(
         all_findings.extend(findings)
 
     generator = BugReportGenerator()
-    reports = generator.generate_batch(all_findings, target, platform=fmt if fmt in ("hackerone", "bugcrowd") else "hackerone")
+    reports = generator.generate_batch(
+        all_findings, target,
+        platform=fmt_lower if fmt_lower in ("hackerone", "bugcrowd") else "hackerone",
+    )
 
-    if fmt in ("hackerone", "bugcrowd"):
-        import json as json_mod
+    if fmt_lower in ("hackerone", "bugcrowd"):
         output_path = f"{output}.json"
-        data = [r.to_hackerone_format() if fmt == "hackerone" else r.to_bugcrowd_format() for r in reports]
-        Path(output_path).write_text(json_mod.dumps(data, indent=2))
+        data = [
+            r.to_hackerone_format() if fmt_lower == "hackerone" else r.to_bugcrowd_format()
+            for r in reports
+        ]
+        Path(output_path).write_text(json.dumps(data, indent=2))
     else:
         output_path = f"{output}.md"
         content = "\n\n---\n\n".join(r.to_markdown() for r in reports)

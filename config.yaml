@@ -378,3 +378,27 @@ plugins:
 scheduler:
   enabled: true
   db_path: "~/.godrecon/scheduler.db"
+
+# ---------------------------------------------------------------------------
+# Proxy / Tor configuration
+# ---------------------------------------------------------------------------
+proxy:
+  enabled: false
+  # Single proxy URL, e.g. socks5://127.0.0.1:9050 or http://user:pass@host:port
+  proxy_url: ""
+  # Path to a file with one proxy URL per line (enables rotation)
+  proxy_list_file: ""
+  rotate: false
+  # Route all traffic through the local Tor SOCKS5 proxy (port 9050)
+  tor_mode: false
+
+# ---------------------------------------------------------------------------
+# Scope management
+# ---------------------------------------------------------------------------
+scope:
+  # Explicit in-scope targets (domains, IPs, CIDRs, *.wildcard)
+  in_scope: []
+  # Regex patterns for assets that should be skipped
+  out_of_scope: []
+  # Path to a scope file (lines prefixed with + or -)
+  scope_file: ""

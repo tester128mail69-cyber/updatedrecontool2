@@ -96,6 +96,79 @@ class ScopeManager:
                 self.add_target(line)
 
     # ------------------------------------------------------------------
+    # Extended scope management API
+    # ------------------------------------------------------------------
+
+    def add_in_scope(self, pattern: str) -> None:
+        """Add a domain, IP, CIDR, or wildcard pattern to the in-scope list.
+
+        Wildcards (``*.example.com``) and CIDR notation are supported.
+        This is an alias for :meth:`add_target`.
+
+        Args:
+            pattern: Scope entry — domain, IP, CIDR, or ``*.domain`` wildcard.
+        """
+        self.add_target(pattern)
+
+    def add_out_of_scope(self, pattern: str) -> None:
+        """Add a pattern to the out-of-scope (exclusion) list.
+
+        The pattern is treated as a regex matched against discovered assets.
+        Simple domain strings are automatically anchored for exact matching.
+
+        Args:
+            pattern: Domain string or regex to exclude.
+        """
+        self.add_exclude(pattern)
+
+    def is_in_scope(self, target: str) -> bool:
+        """Return ``True`` if *target* is within scope and not excluded.
+
+        This is an alias for :meth:`in_scope`.
+
+        Args:
+            target: A domain name or IP address string.
+
+        Returns:
+            Boolean indicating whether the target should be processed.
+        """
+        return self.in_scope(target)
+
+    def load_scope_file(self, filepath: str) -> None:
+        """Load scope rules from a structured text file.
+
+        Each non-comment line must start with ``+`` (in-scope) or ``-``
+        (out-of-scope) followed by the pattern.  Lines without a prefix are
+        treated as in-scope targets, matching the behaviour of
+        :meth:`import_from_file`.
+
+        Example file::
+
+            + example.com
+            + 10.0.0.0/24
+            - staging.example.com
+
+        Args:
+            filepath: Path to the scope rules file.
+
+        Raises:
+            FileNotFoundError: If *filepath* does not exist.
+        """
+        path = Path(filepath)
+        if not path.exists():
+            raise FileNotFoundError(f"Scope file not found: {filepath}")
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("+"):
+                self.add_in_scope(line[1:].strip())
+            elif line.startswith("-"):
+                self.add_out_of_scope(line[1:].strip())
+            else:
+                self.add_in_scope(line)
+
+    # ------------------------------------------------------------------
     # Scope queries
     # ------------------------------------------------------------------
 

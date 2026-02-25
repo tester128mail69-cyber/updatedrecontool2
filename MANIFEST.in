@@ -1,0 +1,8 @@
+include config.yaml
+include requirements.txt
+include README.md
+include LICENSE
+include CHANGELOG.md
+recursive-include wordlists *.txt
+recursive-include godrecon/reporting/templates *
+recursive-include godrecon/data *
