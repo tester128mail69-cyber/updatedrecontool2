@@ -9,6 +9,8 @@ from __future__ import annotations
 from typing import Optional
 
 try:
+    import hmac
+
     from fastapi import HTTPException, Security, status
     from fastapi.security.api_key import APIKeyHeader
 
@@ -30,7 +32,7 @@ try:
             if not api_key:
                 # Auth disabled
                 return
-            if provided_key != api_key:
+            if not provided_key or not hmac.compare_digest(provided_key, api_key):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid or missing API key.",
