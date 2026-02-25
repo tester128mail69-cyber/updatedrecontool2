@@ -719,6 +719,82 @@ try:
     async def dashboard_reports_generate(request: Request) -> HTMLResponse:
         return RedirectResponse("/dashboard/reports", status_code=302)
 
+    # =========================================================================
+    # FILE BROWSER
+    # =========================================================================
+
+    def _get_output_manager(request: Request) -> Any:
+        """Return the OutputManager, lazily creating it from config."""
+        try:
+            from godrecon.core.output_manager import get_output_manager
+            return get_output_manager()
+        except Exception:
+            return None
+
+    @router.get("/files", response_class=HTMLResponse)
+    async def dashboard_files(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse("files.html", {"request": request})
+
+    @router.get("/api/files")
+    async def api_list_targets_files(request: Request) -> JSONResponse:
+        """List all target output directories."""
+        om = _get_output_manager(request)
+        if om is None:
+            return JSONResponse({"targets": []})
+        return JSONResponse({"targets": om.list_targets()})
+
+    @router.get("/api/files/{target}")
+    async def api_list_target_files(request: Request, target: str) -> JSONResponse:
+        """List all files under a target's output directory."""
+        om = _get_output_manager(request)
+        if om is None:
+            return JSONResponse({"files": []})
+        return JSONResponse({"files": om.list_files(target)})
+
+    @router.get("/api/files/{target}/{path:path}/download")
+    async def api_download_file(request: Request, target: str, path: str) -> Response:
+        """Download a file from a target's output directory."""
+        om = _get_output_manager(request)
+        if om is None:
+            raise HTTPException(status_code=404, detail="Output manager not available")
+        try:
+            file_path = om.get_file_path(target, path)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if file_path is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        content = file_path.read_bytes()
+        media_type = "application/octet-stream"
+        if file_path.suffix == ".json":
+            media_type = "application/json"
+        elif file_path.suffix in (".txt", ".md", ".csv"):
+            media_type = "text/plain"
+        from fastapi.responses import StreamingResponse
+        import io
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'},
+        )
+
+    @router.get("/api/files/{target}/{path:path}")
+    async def api_get_file_contents(request: Request, target: str, path: str) -> JSONResponse:
+        """Return the contents of a file as a JSON object with a ``content`` key."""
+        om = _get_output_manager(request)
+        if om is None:
+            raise HTTPException(status_code=404, detail="Output manager not available")
+        try:
+            file_path = om.get_file_path(target, path)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if file_path is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="replace")
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return JSONResponse({"path": path, "name": file_path.name, "content": content})
+
 except ImportError:
     from unittest.mock import MagicMock
     router = MagicMock()  # type: ignore[assignment]
