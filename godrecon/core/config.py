@@ -664,6 +664,13 @@ class ScanModeConfig(BaseModel):
     continuous_interval: int = 3600
 
 
+class PluginsConfig(BaseModel):
+    """Plugin loader configuration."""
+
+    enabled: bool = True
+    plugin_dir: str = "~/.godrecon/plugins"
+
+
 class Config(BaseModel):
     """Top-level GODRECON configuration."""
 
@@ -720,6 +727,7 @@ class Config(BaseModel):
     subdomain_supercharger: SubdomainSuperchargerConfig = Field(
         default_factory=SubdomainSuperchargerConfig
     )
+    plugins: PluginsConfig = Field(default_factory=PluginsConfig)
 
 
 def load_config(config_path: Optional[str] = None) -> Config:
