@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -15,5 +15,7 @@ COPY . .
 # Create output directory
 RUN mkdir -p /app/output
 
-ENTRYPOINT ["python", "main.py"]
+EXPOSE 8000
+
+ENTRYPOINT ["python", "-m", "godrecon"]
 CMD ["--help"]

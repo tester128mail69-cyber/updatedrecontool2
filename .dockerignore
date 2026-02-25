@@ -1,8 +1,14 @@
 __pycache__
 *.pyc
+*.pyo
 .git
 .env
+.env.*
 venv
+.venv
 output/
 *.egg-info
 .pytest_cache
+.mypy_cache
+.ruff_cache
+*.log
