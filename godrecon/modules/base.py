@@ -38,6 +38,13 @@ class Finding:
     confidence: float = 1.0
     source_module: str = ""
     evidence: str = ""
+    curl_command: str = ""
+    raw_request: str = ""
+    raw_response: str = ""
+    reproduction_steps: List[str] = field(default_factory=list)
+    impact: str = ""
+    cvss_score: Optional[float] = None
+    bug_bounty_severity: str = ""
 
 
 @dataclass

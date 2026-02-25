@@ -78,6 +78,9 @@ def scan(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     config_file: Optional[str] = typer.Option(None, "--config", help="Custom config file"),
     verify: Optional[bool] = typer.Option(None, "--verify/--no-verify", help="Run cross-validation pass (default: on in --full mode)"),
+    deep: bool = typer.Option(False, "--deep", help="Enable deep scan mode (exhaustive, no timeouts)"),
+    min_confidence: float = typer.Option(0.5, "--min-confidence", help="Minimum confidence threshold for findings (0.0-1.0)"),
+    resume: bool = typer.Option(False, "--resume", help="Resume interrupted scan from saved intermediate results"),
 ) -> None:
     """[bold]Run a reconnaissance scan against a target.[/]
 
@@ -112,6 +115,22 @@ def scan(
         for field_name in cfg.modules.model_fields:
             setattr(cfg.modules, field_name, True)
 
+    if deep:
+        for field_name in cfg.modules.model_fields:
+            setattr(cfg.modules, field_name, True)
+        cfg.general.deep_scan = True
+        cfg.general.cross_validate = True
+        cfg.general.module_timeout = 0
+        cfg.deep_scan.subdomain_recursive_depth = 5
+        cfg.deep_scan.crawl_max_depth = 10
+        cfg.deep_scan.crawl_max_pages = 5000
+        cfg.deep_scan.content_discovery_recursive = True
+        cfg.deep_scan.content_discovery_depth = 5
+        cfg.deep_scan.port_scan_type = "full"
+        cfg.deep_scan.module_timeout = 0
+
+    cfg.general.min_confidence = min_confidence
+
     if ports:
         cfg.modules.ports = True
     if screenshots:
@@ -126,11 +145,13 @@ def scan(
     if not silent:
         console.print(
             f"[bold green]►[/] Scanning [bold]{target}[/] "
-            f"(threads={threads}, timeout={timeout}s)"
+            f"(threads={threads}, timeout={timeout}s"
+            + (", [bold]DEEP MODE[/]" if deep else "")
+            + ")"
         )
 
     # Run the async scan
-    asyncio.run(_run_scan(target, cfg, output, fmt, silent))
+    asyncio.run(_run_scan(target, cfg, output, fmt, silent, resume))
 
 
 async def _run_scan(
@@ -139,6 +160,7 @@ async def _run_scan(
     output: Optional[str],
     fmt: str,
     silent: bool,
+    resume: bool = False,
 ) -> None:
     """Internal async wrapper for the scan engine."""
     from godrecon.core.engine import ScanEngine
