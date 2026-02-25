@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import typer
 from rich.console import Console
@@ -82,7 +82,7 @@ def scan(
     verify: Optional[bool] = typer.Option(None, "--verify/--no-verify", help="Run cross-validation pass (default: on in --full mode)"),
     deep: bool = typer.Option(False, "--deep", help="Enable deep scan mode (exhaustive, no timeouts)"),
     min_confidence: float = typer.Option(0.5, "--min-confidence", help="Minimum confidence threshold for findings (0.0-1.0)"),
-    resume: bool = typer.Option(False, "--resume", help="Resume interrupted scan from saved intermediate results"),
+    resume: Optional[str] = typer.Option(None, "--resume", help="Resume scan from a checkpoint file (path to JSON checkpoint)"),
     # Authentication options
     auth_cookie: Optional[str] = typer.Option(None, "--auth-cookie", help="Session cookie for authenticated scanning (format: name=value)"),
     auth_token: Optional[str] = typer.Option(None, "--auth-token", help="Bearer token for authenticated scanning"),
@@ -239,12 +239,23 @@ async def _run_scan(
     output: Optional[str],
     fmt: str,
     silent: bool,
-    resume: bool = False,
+    resume: Optional[str] = None,
 ) -> None:
     """Internal async wrapper for the scan engine."""
     from godrecon.core.engine import ScanEngine
 
-    engine = ScanEngine(target=target, config=cfg)  # type: ignore[arg-type]
+    skip_modules: Set[str] = set()
+    if resume:
+        from godrecon.core.checkpoint import load_checkpoint
+        checkpoint = load_checkpoint(resume)
+        skip_modules = set(checkpoint.get("completed_modules", []))
+        if not silent:
+            console.print(
+                f"[dim]  Resuming from checkpoint: {resume} "
+                f"({len(skip_modules)} module(s) already completed)[/]"
+            )
+
+    engine = ScanEngine(target=target, config=cfg, skip_modules=skip_modules)  # type: ignore[arg-type]
 
     events_log: list = []
 
