@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Nuclei Scanner — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🔬 Nuclei Scanner</h1>
+  <p>Nuclei template-based vulnerability scanning results</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">Nuclei Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="nuclei-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="sev-filter" onchange="filterFindings()">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('nuclei-table','nuclei_findings.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="nuclei-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Template ID</th>
+          <th class="sortable">Title</th>
+          <th class="sortable">Severity</th>
+          <th class="sortable">Target</th>
+          <th>Tags</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="nuclei-tbody">
+        <tr><td colspan="6" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const SEV_CLASS = { critical: 'badge-critical', high: 'badge-high', medium: 'badge-medium', low: 'badge-low', info: 'badge-info' };
+
+async function loadNuclei() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          const mod = (f.module || '').toLowerCase();
+          if (mod === 'nuclei' || mod === 'nuclei_scan') {
+            rows.push({ template_id: f.template_id || f.id || '—', title: f.title || f.name || '—', severity: f.severity || 'info', target: f.target || scan.target, tags: f.tags || [], scan_id: scan.scan_id });
+          }
+        });
+        const res = (detail.module_results || {}).nuclei;
+        if (res) {
+          const data = res.data || res || {};
+          (data.findings || data.results || []).forEach(f => {
+            rows.push({ template_id: f.template_id || f.id || '—', title: f.title || f.name || '—', severity: f.severity || 'info', target: f.target || scan.target, tags: f.tags || [], scan_id: scan.scan_id });
+          });
+        }
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('nuclei-tbody').innerHTML = '<tr><td colspan="6" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('nuclei-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty text-muted">No Nuclei findings yet. Run a scan with the nuclei module.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(f => `
+    <tr>
+      <td class="font-mono text-xs">${GODRECON.escHtml(f.template_id)}</td>
+      <td>${GODRECON.escHtml(f.title)}</td>
+      <td><span class="badge ${SEV_CLASS[f.severity?.toLowerCase()] || 'badge-info'}">${GODRECON.escHtml(f.severity)}</span></td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(f.target)}</td>
+      <td>${(f.tags||[]).map(t => `<span class="badge badge-blue" style="margin-right:2px;">${GODRECON.escHtml(t)}</span>`).join('') || '—'}</td>
+      <td><a href="/dashboard/scans/${f.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('nuclei-search').value.toLowerCase();
+  const sev = document.getElementById('sev-filter').value.toLowerCase();
+  const filtered = allRows.filter(f => {
+    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return false;
+    if (sev && f.severity?.toLowerCase() !== sev) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('nuclei-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('nuclei-table');
+loadNuclei();
+</script>
+{% endblock %}

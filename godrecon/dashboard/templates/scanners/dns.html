@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}DNS Analysis — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🌐 DNS Analysis</h1>
+  <p>DNS records, zone transfers, and misconfiguration findings</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">DNS Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="dns-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="type-filter" onchange="filterFindings()">
+        <option value="">All Types</option>
+        <option value="a">A</option>
+        <option value="mx">MX</option>
+        <option value="ns">NS</option>
+        <option value="txt">TXT</option>
+        <option value="cname">CNAME</option>
+        <option value="zone_transfer">Zone Transfer</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('dns-table','dns_findings.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="dns-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Type</th>
+          <th class="sortable">Name</th>
+          <th>Value</th>
+          <th class="sortable">Severity</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="dns-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const SEV_CLASS = { critical: 'badge-critical', high: 'badge-high', medium: 'badge-medium', low: 'badge-low', info: 'badge-info' };
+const DNS_MODULES = ['dns', 'dns_enum', 'dns_analysis', 'dns_brute'];
+
+async function loadDNS() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (DNS_MODULES.includes((f.module || '').toLowerCase()) || (f.category || '').toLowerCase() === 'dns') {
+            rows.push({ type: f.record_type || f.type || f.module || '—', name: f.name || f.title || scan.target, value: f.value || f.target || '—', severity: f.severity || 'info', scan_id: scan.scan_id });
+          }
+        });
+        DNS_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.records || data.findings || data.results || []).forEach(r => {
+              rows.push({ type: r.type || r.record_type || mod, name: r.name || r.host || scan.target, value: r.value || r.data || r.address || '—', severity: r.severity || 'info', scan_id: scan.scan_id });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('dns-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('dns-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No DNS findings yet. Run a scan with dns modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td><span class="badge badge-blue">${GODRECON.escHtml(r.type)}</span></td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(r.name)}</td>
+      <td class="font-mono text-xs">${GODRECON.escHtml(r.value)}</td>
+      <td><span class="badge ${SEV_CLASS[r.severity?.toLowerCase()] || 'badge-info'}">${GODRECON.escHtml(r.severity)}</span></td>
+      <td><a href="/dashboard/scans/${r.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('dns-search').value.toLowerCase();
+  const type = document.getElementById('type-filter').value.toLowerCase();
+  const filtered = allRows.filter(r => {
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    if (type && r.type.toLowerCase() !== type) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('dns-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('dns-table');
+loadDNS();
+</script>
+{% endblock %}

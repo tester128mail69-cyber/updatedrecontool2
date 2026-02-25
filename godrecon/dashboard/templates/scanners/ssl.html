@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}SSL/TLS Analysis — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🔒 SSL/TLS Analysis</h1>
+  <p>SSL/TLS certificate and configuration vulnerability findings</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">SSL/TLS Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="ssl-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="sev-filter" onchange="filterFindings()">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('ssl-table','ssl_findings.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="ssl-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Issue</th>
+          <th class="sortable">Severity</th>
+          <th class="sortable">Host</th>
+          <th>Details</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="ssl-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const SEV_CLASS = { critical: 'badge-critical', high: 'badge-high', medium: 'badge-medium', low: 'badge-low', info: 'badge-info' };
+const SSL_MODULES = ['ssl', 'ssl_scan', 'tls', 'tls_scan', 'ssl_tls'];
+
+async function loadSSL() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (SSL_MODULES.includes((f.module || '').toLowerCase()) || (f.category || '').toLowerCase() === 'ssl') {
+            rows.push({ issue: f.title || f.name || '—', severity: f.severity || 'info', host: f.target || scan.target, details: f.description || f.detail || '—', scan_id: scan.scan_id });
+          }
+        });
+        SSL_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.findings || data.issues || data.results || []).forEach(f => {
+              rows.push({ issue: f.title || f.name || f.issue || '—', severity: f.severity || 'info', host: f.host || f.target || scan.target, details: f.description || f.detail || '—', scan_id: scan.scan_id });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('ssl-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('ssl-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No SSL/TLS findings yet. Run a scan with ssl modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${GODRECON.escHtml(r.issue)}</td>
+      <td><span class="badge ${SEV_CLASS[r.severity?.toLowerCase()] || 'badge-info'}">${GODRECON.escHtml(r.severity)}</span></td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(r.host)}</td>
+      <td class="text-sm text-dim" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;">${GODRECON.escHtml(r.details)}</td>
+      <td><a href="/dashboard/scans/${r.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('ssl-search').value.toLowerCase();
+  const sev = document.getElementById('sev-filter').value.toLowerCase();
+  const filtered = allRows.filter(r => {
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    if (sev && r.severity?.toLowerCase() !== sev) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('ssl-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('ssl-table');
+loadSSL();
+</script>
+{% endblock %}

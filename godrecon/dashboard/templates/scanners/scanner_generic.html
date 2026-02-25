@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ scanner_name }} — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ scanner_icon }} {{ scanner_name }}</h1>
+  <p>{{ scanner_desc }}</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="scanner-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="severity-filter" onchange="filterFindings()">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('scanner-table','{{ scanner_module }}_findings.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="scanner-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Title</th>
+          <th class="sortable">Severity</th>
+          <th class="sortable">Target</th>
+          <th class="sortable">Module</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="scanner-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const SCANNER_MODULE = {{ scanner_module | tojson }};
+const SCANNER_ALIASES = {{ scanner_module_aliases | tojson }};
+let allFindings = [];
+
+function matchesModule(mod) {
+  if (!mod) return false;
+  const m = mod.toLowerCase();
+  if (m === SCANNER_MODULE.toLowerCase()) return true;
+  if (SCANNER_ALIASES) {
+    for (const alias of SCANNER_ALIASES.split(',')) {
+      if (alias.trim() && m === alias.trim().toLowerCase()) return true;
+    }
+  }
+  return false;
+}
+
+async function loadFindings() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (matchesModule(f.module)) {
+            rows.push({ title: f.title || f.name || '—', severity: f.severity || 'info', target: f.target || scan.target, module: f.module, scan_id: scan.scan_id, scan_target: scan.target });
+          }
+        });
+        const modResults = detail.module_results || {};
+        [SCANNER_MODULE, ...(SCANNER_ALIASES ? SCANNER_ALIASES.split(',') : [])].forEach(alias => {
+          const key = alias.trim();
+          if (!key) return;
+          const res = modResults[key];
+          if (res) {
+            const data = res.data || res || {};
+            (data.findings || data.results || []).forEach(f => {
+              if (!rows.find(r => r.title === (f.title || f.name) && r.scan_id === scan.scan_id)) {
+                rows.push({ title: f.title || f.name || f.url || JSON.stringify(f).substring(0,60), severity: f.severity || 'info', target: f.target || scan.target, module: key, scan_id: scan.scan_id, scan_target: scan.target });
+              }
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allFindings = rows;
+    renderFindings(rows);
+  } catch(e) {
+    document.getElementById('scanner-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+const SEV_CLASS = { critical: 'badge-critical', high: 'badge-high', medium: 'badge-medium', low: 'badge-low', info: 'badge-info' };
+
+function renderFindings(list) {
+  const tbody = document.getElementById('scanner-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No findings for this scanner yet. Run a scan first.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(f => `
+    <tr>
+      <td>${GODRECON.escHtml(f.title)}</td>
+      <td><span class="badge ${SEV_CLASS[f.severity?.toLowerCase()] || 'badge-info'}">${GODRECON.escHtml(f.severity)}</span></td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(f.target)}</td>
+      <td class="text-sm">${GODRECON.escHtml(f.module || '—')}</td>
+      <td><a href="/dashboard/scans/${f.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('scanner-search').value.toLowerCase();
+  const sev = document.getElementById('severity-filter').value.toLowerCase();
+  const filtered = allFindings.filter(f => {
+    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return false;
+    if (sev && f.severity?.toLowerCase() !== sev) return false;
+    return true;
+  });
+  renderFindings(filtered);
+}
+
+document.getElementById('scanner-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('scanner-table');
+loadFindings();
+</script>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}GitHub Dorking — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🐙 GitHub Dorking</h1>
+  <p>GitHub secret scanning and code dorking results</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">GitHub Dork Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="gh-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="type-filter" onchange="filterFindings()">
+        <option value="">All Types</option>
+        <option value="secret">Secrets</option>
+        <option value="api_key">API Keys</option>
+        <option value="token">Tokens</option>
+        <option value="password">Passwords</option>
+        <option value="config">Config Files</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('gh-table','github_dorking.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="gh-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Type</th>
+          <th class="sortable">Repository</th>
+          <th>File Path</th>
+          <th>Secret (Redacted)</th>
+          <th class="sortable">Target</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="gh-tbody">
+        <tr><td colspan="6" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const GH_MODULES = ['github_dorking', 'git_dorking', 'github_secrets', 'github'];
+
+async function loadGitHub() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (GH_MODULES.includes((f.module || '').toLowerCase())) {
+            rows.push({ type: f.category || f.type || 'secret', repo: f.repo || f.repository || '—', file: f.file || f.path || '—', secret: f.secret || f.value || f.title || '—', target: scan.target, scan_id: scan.scan_id });
+          }
+        });
+        GH_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.findings || data.secrets || data.results || []).forEach(f => {
+              const secret = f.secret || f.value || '';
+              rows.push({ type: f.type || f.category || 'secret', repo: f.repo || f.repository || '—', file: f.file || f.path || '—', secret, target: scan.target, scan_id: scan.scan_id });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('gh-tbody').innerHTML = '<tr><td colspan="6" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function redact(s) {
+  if (!s || s === '—') return '—';
+  if (s.length <= 8) return '****';
+  return s.substring(0, 4) + '****' + s.substring(s.length - 2);
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('gh-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty text-muted">No GitHub dorking results yet. Run a scan with github_dorking modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td><span class="badge badge-purple">${GODRECON.escHtml(r.type)}</span></td>
+      <td class="font-mono text-xs">${GODRECON.escHtml(r.repo)}</td>
+      <td class="font-mono text-xs" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">${GODRECON.escHtml(r.file)}</td>
+      <td class="font-mono text-sm">
+        ${GODRECON.escHtml(redact(r.secret))}
+        ${r.secret && r.secret !== '—' ? `<button class="copy-btn" onclick="GODRECON.copyToClipboard('${GODRECON.escHtml(r.secret)}')">📋</button>` : ''}
+      </td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(r.target)}</td>
+      <td><a href="/dashboard/scans/${r.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('gh-search').value.toLowerCase();
+  const type = document.getElementById('type-filter').value.toLowerCase();
+  const filtered = allRows.filter(r => {
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    if (type && r.type.toLowerCase() !== type) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('gh-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('gh-table');
+loadGitHub();
+</script>
+{% endblock %}

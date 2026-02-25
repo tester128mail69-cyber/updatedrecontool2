@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Cloud Misconfig — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>☁️ Cloud Misconfig</h1>
+  <p>Cloud misconfiguration findings (S3, Azure, GCP, Firebase)</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">Cloud Findings</div>
+    <div class="filters-right">
+      <input class="filter-input" id="cloud-search" type="text" placeholder="Filter findings…">
+      <select class="filter-select" id="provider-filter" onchange="filterFindings()">
+        <option value="">All Providers</option>
+        <option value="s3">S3 / AWS</option>
+        <option value="azure">Azure</option>
+        <option value="gcp">GCP</option>
+        <option value="firebase">Firebase</option>
+      </select>
+      <select class="filter-select" id="sev-filter" onchange="filterFindings()">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('cloud-table','cloud_findings.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="cloud-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Provider</th>
+          <th class="sortable">Title</th>
+          <th class="sortable">Severity</th>
+          <th class="sortable">Resource</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="cloud-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const SEV_CLASS = { critical: 'badge-critical', high: 'badge-high', medium: 'badge-medium', low: 'badge-low', info: 'badge-info' };
+const CLOUD_MODULES = ['cloud', 'cloud_misconfig', 's3', 'azure', 'gcp', 'firebase'];
+
+async function loadCloud() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (CLOUD_MODULES.includes((f.module || '').toLowerCase())) {
+            rows.push({ provider: f.provider || f.module || '—', title: f.title || f.name || '—', severity: f.severity || 'info', resource: f.target || f.resource || scan.target, scan_id: scan.scan_id });
+          }
+        });
+        CLOUD_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.findings || data.results || data.buckets || []).forEach(f => {
+              rows.push({ provider: mod, title: f.title || f.name || f.bucket || '—', severity: f.severity || 'info', resource: f.target || f.url || f.resource || scan.target, scan_id: scan.scan_id });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('cloud-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('cloud-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No cloud misconfig findings yet. Run a scan with cloud modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(f => `
+    <tr>
+      <td><span class="badge badge-blue">${GODRECON.escHtml(f.provider)}</span></td>
+      <td>${GODRECON.escHtml(f.title)}</td>
+      <td><span class="badge ${SEV_CLASS[f.severity?.toLowerCase()] || 'badge-info'}">${GODRECON.escHtml(f.severity)}</span></td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(f.resource)}</td>
+      <td><a href="/dashboard/scans/${f.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterFindings() {
+  const q = document.getElementById('cloud-search').value.toLowerCase();
+  const prov = document.getElementById('provider-filter').value.toLowerCase();
+  const sev = document.getElementById('sev-filter').value.toLowerCase();
+  const filtered = allRows.filter(f => {
+    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return false;
+    if (prov && !f.provider.toLowerCase().includes(prov)) return false;
+    if (sev && f.severity?.toLowerCase() !== sev) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('cloud-search').addEventListener('input', GODRECON.debounce(filterFindings, 200));
+GODRECON.makeSortable('cloud-table');
+loadCloud();
+</script>
+{% endblock %}

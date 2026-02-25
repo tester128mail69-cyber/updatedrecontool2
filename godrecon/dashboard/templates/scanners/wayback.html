@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Wayback Machine — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>⏪ Wayback Machine</h1>
+  <p>Historical URLs and archived content discovered via Wayback Machine</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">Wayback URLs</div>
+    <div class="filters-right">
+      <input class="filter-input" id="wb-search" type="text" placeholder="Filter URLs…">
+      <select class="filter-select" id="interest-filter" onchange="filterResults()">
+        <option value="">All</option>
+        <option value="interesting">Interesting</option>
+        <option value="params">Has Params</option>
+        <option value="ext">File Extensions</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('wb-table','wayback_urls.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="wb-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">URL</th>
+          <th class="sortable">Status</th>
+          <th class="sortable">Date</th>
+          <th class="sortable">Target</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="wb-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const WB_MODULES = ['wayback', 'wayback_machine', 'waymore', 'web_archive'];
+
+async function loadWayback() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (WB_MODULES.includes((f.module || '').toLowerCase())) {
+            rows.push({ url: f.target || f.url || '—', status: f.status_code || '—', date: f.timestamp || f.date || '—', target: scan.target, scan_id: scan.scan_id, interesting: f.interesting || false });
+          }
+        });
+        WB_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.urls || data.results || data.findings || []).forEach(r => {
+              const url = typeof r === 'string' ? r : (r.url || r.target || '—');
+              rows.push({ url, status: r.status || r.status_code || '—', date: r.timestamp || r.date || '—', target: scan.target, scan_id: scan.scan_id, interesting: r.interesting || url.includes('?') });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('wb-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('wb-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No Wayback URLs found yet. Run a scan with wayback modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td class="font-mono text-xs" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;" title="${GODRECON.escHtml(r.url)}">
+        <a href="${GODRECON.escHtml(r.url)}" target="_blank" rel="noopener">${GODRECON.escHtml(r.url)}</a>
+        ${r.interesting ? '<span class="badge badge-medium" style="margin-left:4px;">★</span>' : ''}
+      </td>
+      <td><span class="badge ${r.status >= 200 && r.status < 300 ? 'badge-success' : 'badge-info'}">${GODRECON.escHtml(String(r.status))}</span></td>
+      <td class="text-sm text-dim">${GODRECON.escHtml(r.date)}</td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(r.target)}</td>
+      <td><a href="/dashboard/scans/${r.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterResults() {
+  const q = document.getElementById('wb-search').value.toLowerCase();
+  const interest = document.getElementById('interest-filter').value;
+  const filtered = allRows.filter(r => {
+    if (q && !r.url.toLowerCase().includes(q)) return false;
+    if (interest === 'interesting' && !r.interesting) return false;
+    if (interest === 'params' && !r.url.includes('?')) return false;
+    if (interest === 'ext' && !/\.(php|asp|aspx|jsp|json|xml|sql|bak|old|zip|tar|gz)/.test(r.url)) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('wb-search').addEventListener('input', GODRECON.debounce(filterResults, 200));
+GODRECON.makeSortable('wb-table');
+loadWayback();
+</script>
+{% endblock %}

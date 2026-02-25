@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Passive Recon — GODRECON{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🕵️ Passive Recon</h1>
+  <p>Passive reconnaissance findings from Shodan, Censys, SecurityTrails, and VirusTotal</p>
+</div>
+<div class="card p-0">
+  <div class="card-header" style="padding:16px 20px;">
+    <div class="card-title-lg">Passive Recon Results</div>
+    <div class="filters-right">
+      <input class="filter-input" id="passive-search" type="text" placeholder="Filter results…">
+      <select class="filter-select" id="source-filter" onchange="filterResults()">
+        <option value="">All Sources</option>
+        <option value="shodan">Shodan</option>
+        <option value="censys">Censys</option>
+        <option value="securitytrails">SecurityTrails</option>
+        <option value="virustotal">VirusTotal</option>
+      </select>
+      <button class="btn btn-sm" onclick="GODRECON.exportTableCSV('passive-table','passive_recon.csv')">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="passive-table" data-sortable>
+      <thead>
+        <tr>
+          <th class="sortable">Source</th>
+          <th class="sortable">Type</th>
+          <th class="sortable">Host / IP</th>
+          <th>Details</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="passive-tbody">
+        <tr><td colspan="5" class="table-empty"><span class="spinner"></span> Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let allRows = [];
+const PASSIVE_MODULES = ['passive_recon', 'shodan', 'censys', 'securitytrails', 'virustotal', 'passive'];
+
+async function loadPassive() {
+  try {
+    const scans = await GODRECON.apiGet('/api/v1/scans');
+    const rows = [];
+    for (const scan of (scans.scans || [])) {
+      if (scan.status !== 'completed') continue;
+      try {
+        const detail = await GODRECON.apiGet('/api/v1/scans/' + scan.scan_id);
+        (detail.findings || []).forEach(f => {
+          if (PASSIVE_MODULES.includes((f.module || '').toLowerCase())) {
+            rows.push({ source: f.module || '—', type: f.category || f.type || '—', host: f.target || scan.target, details: f.title || f.description || '—', scan_id: scan.scan_id });
+          }
+        });
+        PASSIVE_MODULES.forEach(mod => {
+          const res = (detail.module_results || {})[mod];
+          if (res) {
+            const data = res.data || res || {};
+            (data.results || data.findings || data.hosts || []).forEach(r => {
+              rows.push({ source: mod, type: r.type || r.record_type || '—', host: r.host || r.ip || r.target || scan.target, details: r.info || r.title || r.banner || JSON.stringify(r).substring(0, 60), scan_id: scan.scan_id });
+            });
+          }
+        });
+      } catch(_) {}
+    }
+    allRows = rows;
+    renderRows(rows);
+  } catch(e) {
+    document.getElementById('passive-tbody').innerHTML = '<tr><td colspan="5" class="table-empty">No data yet. Run a scan first.</td></tr>';
+  }
+}
+
+function renderRows(list) {
+  const tbody = document.getElementById('passive-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty text-muted">No passive recon data yet. Run a scan with passive_recon modules.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td><span class="badge badge-purple">${GODRECON.escHtml(r.source)}</span></td>
+      <td class="text-sm">${GODRECON.escHtml(r.type)}</td>
+      <td class="font-mono text-sm">${GODRECON.escHtml(r.host)}</td>
+      <td class="text-sm text-dim" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;">${GODRECON.escHtml(r.details)}</td>
+      <td><a href="/dashboard/scans/${r.scan_id}" class="btn btn-xs">View Scan</a></td>
+    </tr>
+  `).join('');
+}
+
+function filterResults() {
+  const q = document.getElementById('passive-search').value.toLowerCase();
+  const src = document.getElementById('source-filter').value.toLowerCase();
+  const filtered = allRows.filter(r => {
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    if (src && r.source.toLowerCase() !== src) return false;
+    return true;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('passive-search').addEventListener('input', GODRECON.debounce(filterResults, 200));
+GODRECON.makeSortable('passive-table');
+loadPassive();
+</script>
+{% endblock %}
