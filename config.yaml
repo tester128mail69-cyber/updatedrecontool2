@@ -370,3 +370,7 @@ supply_chain:
   enabled: true
   check_sri: true
   check_vulnerable_versions: true
+
+plugins:
+  enabled: true
+  plugin_dir: "~/.godrecon/plugins"
