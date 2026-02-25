@@ -15,6 +15,7 @@ import traceback
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
+from godrecon.core.checkpoint import save_checkpoint
 from godrecon.core.config import Config, load_config
 from godrecon.core.scheduler import Priority, Scheduler, Task
 from godrecon.core.scope import ScopeManager
@@ -80,6 +81,7 @@ class ScanEngine:
         target: str,
         config: Optional[Config] = None,
         config_path: Optional[str] = None,
+        skip_modules: Optional[Set[str]] = None,
     ) -> None:
         """Initialise the scan engine.
 
@@ -88,6 +90,8 @@ class ScanEngine:
             config: Pre-built :class:`~godrecon.core.config.Config` object. If
                     ``None`` the configuration is loaded from *config_path*.
             config_path: Optional path to a YAML configuration file.
+            skip_modules: Set of module names to skip (e.g. already completed
+                          in a previous run).  Used by ``--resume``.
         """
         self.target = target
         self.config: Config = config or load_config(config_path)
@@ -97,6 +101,7 @@ class ScanEngine:
         # Circuit-breaker: tracks consecutive failure count per module name
         self._failure_counts: Dict[str, int] = {}
         self._circuit_open: Set[str] = set()
+        self._skip_modules: Set[str] = skip_modules or set()
 
     # ------------------------------------------------------------------
     # Public API
@@ -285,6 +290,11 @@ class ScanEngine:
             module: Module instance (must implement ``BaseModule``).
             result: The scan result object to populate.
         """
+        # Skip modules already completed in a previous checkpoint
+        if module.name in self._skip_modules:
+            logger.info("Module '%s' skipped — already completed in checkpoint.", module.name)
+            return
+
         # Circuit-breaker: skip modules that have failed too many times
         if module.name in self._circuit_open:
             logger.warning("Module '%s' circuit is open — skipping.", module.name)
@@ -301,6 +311,11 @@ class ScanEngine:
             result.module_results[module.name] = module_result
             # Reset failure count on success
             self._failure_counts.pop(module.name, None)
+            save_checkpoint(
+                self.target,
+                list(result.module_results.keys()),
+                result.module_results,
+            )
             await self._emit(
                 {
                     "event": "module_finished",
