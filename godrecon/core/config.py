@@ -678,6 +678,24 @@ class SchedulerConfig(BaseModel):
     db_path: str = "~/.godrecon/scheduler.db"
 
 
+class ProxyConfig(BaseModel):
+    """Proxy and Tor configuration."""
+
+    enabled: bool = False
+    proxy_url: str = ""
+    proxy_list_file: str = ""
+    rotate: bool = False
+    tor_mode: bool = False
+
+
+class ScopeConfig(BaseModel):
+    """Scan scope configuration."""
+
+    in_scope: List[str] = Field(default_factory=list)
+    out_of_scope: List[str] = Field(default_factory=list)
+    scope_file: str = ""
+
+
 class Config(BaseModel):
     """Top-level GODRECON configuration."""
 
@@ -736,6 +754,8 @@ class Config(BaseModel):
     )
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
+    proxy: ProxyConfig = Field(default_factory=ProxyConfig)
+    scope: ScopeConfig = Field(default_factory=ScopeConfig)
 
 
 def load_config(config_path: Optional[str] = None) -> Config:

@@ -96,3 +96,82 @@ def test_import_from_file_missing():
     sm = ScopeManager()
     with pytest.raises(FileNotFoundError):
         sm.import_from_file("/nonexistent/targets.txt")
+
+
+# ---------------------------------------------------------------------------
+# New extended API
+# ---------------------------------------------------------------------------
+
+def test_add_in_scope_domain():
+    sm = ScopeManager()
+    sm.add_in_scope("example.com")
+    assert sm.is_in_scope("example.com")
+    assert sm.is_in_scope("api.example.com")
+
+
+def test_add_out_of_scope():
+    sm = ScopeManager()
+    sm.add_in_scope("example.com")
+    sm.add_out_of_scope(r"staging\.example\.com$")
+    assert not sm.is_in_scope("staging.example.com")
+    assert sm.is_in_scope("api.example.com")
+
+
+def test_is_in_scope_alias():
+    sm = ScopeManager()
+    sm.add_target("example.com")
+    assert sm.is_in_scope("example.com") is sm.in_scope("example.com")
+
+
+def test_add_in_scope_cidr():
+    sm = ScopeManager()
+    sm.add_in_scope("192.168.0.0/24")
+    assert sm.is_in_scope("192.168.0.1")
+    assert not sm.is_in_scope("192.168.1.1")
+
+
+def test_add_in_scope_wildcard():
+    sm = ScopeManager()
+    sm.add_in_scope("*.example.com")
+    assert sm.is_in_scope("api.example.com")
+    assert sm.is_in_scope("example.com")
+    assert not sm.is_in_scope("other.com")
+
+
+def test_load_scope_file(tmp_path):
+    scope_file = tmp_path / "scope.txt"
+    scope_file.write_text(
+        "+ example.com\n"
+        "+ 10.0.0.0/24\n"
+        "- staging.example.com\n"
+        "# this is a comment\n"
+    )
+    sm = ScopeManager()
+    sm.load_scope_file(str(scope_file))
+    assert sm.is_in_scope("example.com")
+    assert sm.is_in_scope("api.example.com")
+    assert sm.is_in_scope("10.0.0.5")
+    assert not sm.is_in_scope("staging.example.com")
+
+
+def test_load_scope_file_no_prefix(tmp_path):
+    scope_file = tmp_path / "scope.txt"
+    scope_file.write_text("example.com\n10.0.0.1\n")
+    sm = ScopeManager()
+    sm.load_scope_file(str(scope_file))
+    assert sm.is_in_scope("example.com")
+    assert sm.is_in_scope("10.0.0.1")
+
+
+def test_load_scope_file_not_found():
+    sm = ScopeManager()
+    with pytest.raises(FileNotFoundError):
+        sm.load_scope_file("/nonexistent/scope.txt")
+
+
+def test_load_scope_file_empty_lines_ignored(tmp_path):
+    scope_file = tmp_path / "scope.txt"
+    scope_file.write_text("\n\n+ example.com\n\n")
+    sm = ScopeManager()
+    sm.load_scope_file(str(scope_file))
+    assert sm.is_in_scope("example.com")
