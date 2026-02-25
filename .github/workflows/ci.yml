@@ -5,10 +5,12 @@ on:
     branches: [main]
   pull_request:
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+jobs:
+  lint:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -17,6 +19,29 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install lint tools
+        run: pip install flake8 black
+
+      - name: Run flake8
+        run: flake8 . --count --max-line-length=120 --extend-ignore=E203,W503 --statistics
+
+      - name: Run black --check
+        run: black --check --line-length 120 .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -24,21 +49,27 @@ jobs:
 
       - name: Run pytest
         run: pytest tests/ -v
-        continue-on-error: true
 
-      - name: Run ruff (optional)
-        run: |
-          if command -v ruff &>/dev/null || pip show ruff &>/dev/null 2>&1; then
-            ruff check .
-          else
-            echo "ruff not available, skipping"
-          fi
-        continue-on-error: true
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Python syntax check
-        run: |
-          python -m py_compile main.py
-          python -m py_compile godrecon/cli.py
-          python -m py_compile godrecon/core/engine.py
-          python -m py_compile godrecon/core/config.py
-          python -m py_compile godrecon/core/scope.py
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit
+        run: bandit -r godrecon/ main.py -ll
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t godrecon:ci .

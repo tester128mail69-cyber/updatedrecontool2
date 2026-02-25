@@ -10,6 +10,7 @@
                           by nothingmch69
 ```
 
+[![CI](https://github.com/tester128mail69-cyber/updatedrecontool2/actions/workflows/ci.yml/badge.svg)](https://github.com/tester128mail69-cyber/updatedrecontool2/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/tester123mail69-cyber/updatedrecontool?style=social)](https://github.com/tester123mail69-cyber/updatedrecontool/stargazers)
