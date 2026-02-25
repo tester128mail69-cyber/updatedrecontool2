@@ -76,7 +76,8 @@ def scan(
     timeout: int = typer.Option(10, "--timeout", help="Request timeout in seconds"),
     proxy: Optional[str] = typer.Option(None, "--proxy", help="Proxy URL (http/socks5)"),
     silent: bool = typer.Option(False, "--silent", help="Minimal output"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output (DEBUG level logging)"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all output except errors (ERROR level logging)"),
     config_file: Optional[str] = typer.Option(None, "--config", help="Custom config file"),
     verify: Optional[bool] = typer.Option(None, "--verify/--no-verify", help="Run cross-validation pass (default: on in --full mode)"),
     deep: bool = typer.Option(False, "--deep", help="Enable deep scan mode (exhaustive, no timeouts)"),
@@ -116,10 +117,14 @@ def scan(
 
         godrecon scan --target 192.168.1.0/24 --ports --threads 100
     """
+    if verbose and quiet:
+        err_console.print("[red]Error: --verbose and --quiet are mutually exclusive.[/]")
+        raise typer.Exit(1)
+
     if not silent:
         _print_banner()
 
-    configure_logging(verbose=verbose)
+    configure_logging(verbose=verbose, quiet=quiet)
 
     # Load and patch config
     cfg = load_config(config_file)
