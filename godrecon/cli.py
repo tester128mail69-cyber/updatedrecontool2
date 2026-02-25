@@ -584,36 +584,68 @@ def schedules(
 
 @app.command()
 def diff(
-    scan1: str = typer.Argument(..., help="Path to first scan result JSON file"),
-    scan2: str = typer.Argument(..., help="Path to second scan result JSON file"),
+    scan1: Optional[int] = typer.Option(None, "--scan1", help="Database ID of the baseline scan"),
+    scan2: Optional[int] = typer.Option(None, "--scan2", help="Database ID of the newer scan to compare"),
+    target: Optional[str] = typer.Option(None, "--target", "-t", help="Target domain (used with --latest)"),
+    latest: bool = typer.Option(False, "--latest", is_flag=True, help="Compare the two most-recent scans for --target"),
+    output_format: str = typer.Option("text", "--format", "-f", help="Output format: text or json"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write diff report to this file path"),
 ) -> None:
-    """Compare two scan results and show differences."""
-    import json
-    from godrecon.monitoring.diff import ScanDiffer
+    """[bold]Compare two scan results and highlight differences.[/]
 
-    with open(scan1) as f:
-        old = json.load(f)
-    with open(scan2) as f:
-        new = json.load(f)
+    Examples:
 
-    differ = ScanDiffer()
-    summary = differ.diff(old, new)
+        godrecon diff --scan1 1 --scan2 2
 
-    if not summary.has_changes:
-        console.print("[green]No changes detected between scans.[/]")
+        godrecon diff --target example.com --latest
+
+        godrecon diff --scan1 3 --scan2 5 --format json -o diff.json
+    """
+    from godrecon.core.diff_engine import ScanDiffEngine
+
+    engine = ScanDiffEngine()
+
+    try:
+        if latest:
+            if not target:
+                err_console.print("[red]--target is required when using --latest[/]")
+                raise typer.Exit(1)
+            report = engine.diff_latest(target)
+        elif scan1 is not None and scan2 is not None:
+            report = engine.diff_by_ids(scan1, scan2)
+        else:
+            err_console.print(
+                "[red]Provide either --scan1 and --scan2, or --target with --latest.[/]"
+            )
+            raise typer.Exit(1)
+    except ValueError as exc:
+        err_console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+
+    if output_format == "json":
+        rendered = report.to_json()
+    else:
+        rendered = report.to_text()
+
+    if output:
+        Path(output).write_text(rendered)
+        console.print(f"[green]Diff report written to {output}[/]")
+    else:
+        console.print(rendered)
+
+    if not report.has_changes:
         return
 
-    console.print(f"\n[bold]Scan Diff Summary[/]")
-    console.print(f"New findings: [red]{summary.total_new}[/]")
-    console.print(f"Resolved findings: [green]{summary.total_resolved}[/]")
-
-    if summary.new_subdomains:
-        console.print(f"\nNew subdomains: {', '.join(summary.new_subdomains)}")
-    if summary.new_ports:
-        console.print(f"New ports: {', '.join(summary.new_ports)}")
-
-    for sev, count in summary.severity_counts.items():
-        console.print(f"  {sev}: {count} new")
+    # Summary counts for text mode (already included in to_text; add for JSON)
+    if output_format == "json":
+        console.print(
+            f"[bold]Summary:[/] "
+            f"+{len(report.subdomains.added)} subdomains  "
+            f"-{len(report.subdomains.removed)} subdomains  "
+            f"+{len(report.ports.added)} ports  "
+            f"+{len(report.vulnerabilities.added)} vulns  "
+            f"-{len(report.vulnerabilities.removed)} vulns"
+        )
 
 
 # ---------------------------------------------------------------------------
