@@ -6,10 +6,18 @@ services:
     container_name: godrecon
     volumes:
       - ./output:/app/output
-      - ./config.yaml:/app/config.yaml
+      - ./config:/app/config
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    entrypoint: ["python", "main.py"]
+    entrypoint: ["python", "-m", "godrecon"]
     command: ["--help"]
+
+  # Optional Redis service for caching. Remove this section if caching is not needed.
+  redis:
+    image: redis:7-alpine
+    container_name: godrecon-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
