@@ -277,10 +277,11 @@ class ScanEngine:
         await self._emit({"event": "module_started", "module": module.name})
         module_timeout = self.config.general.module_timeout
         try:
-            module_result = await asyncio.wait_for(
-                module.run(self.target, self.config),
-                timeout=module_timeout,
-            )
+            coro = module.run(self.target, self.config)
+            if module_timeout > 0:
+                module_result = await asyncio.wait_for(coro, timeout=module_timeout)
+            else:
+                module_result = await coro
             result.module_results[module.name] = module_result
             # Reset failure count on success
             self._failure_counts.pop(module.name, None)

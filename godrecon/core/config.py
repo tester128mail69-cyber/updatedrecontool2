@@ -194,6 +194,20 @@ class ReportingConfig(BaseModel):
     include_screenshots: bool = True
 
 
+class DeepScanConfig(BaseModel):
+    """Deep scan mode configuration overrides."""
+
+    port_scan_type: str = "full"
+    subdomain_recursive_depth: int = 5
+    crawl_max_depth: int = 10
+    crawl_max_pages: int = 5000
+    content_discovery_recursive: bool = True
+    content_discovery_depth: int = 5
+    bruteforce_wordlist: str = "wordlists/subdomains-large.txt"
+    directory_wordlist: str = "wordlists/directories-large.txt"
+    module_timeout: int = 0
+
+
 class GeneralConfig(BaseModel):
     """General scan configuration."""
 
@@ -202,6 +216,12 @@ class GeneralConfig(BaseModel):
     retries: int = 3
     module_timeout: int = 300
     cross_validate: bool = False
+    deep_scan: bool = False
+    safe_mode: bool = True
+    rate_limit: int = 0
+    delay_between_requests: float = 0.0
+    max_payload_tests: int = 10
+    min_confidence: float = 0.5
     user_agents: List[str] = Field(
         default_factory=lambda: [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -379,6 +399,7 @@ class Config(BaseModel):
     """Top-level GODRECON configuration."""
 
     general: GeneralConfig = Field(default_factory=GeneralConfig)
+    deep_scan: DeepScanConfig = Field(default_factory=DeepScanConfig)
     dns: DNSConfig = Field(default_factory=DNSConfig)
     modules: ModulesConfig = Field(default_factory=ModulesConfig)
     subdomains: SubdomainModuleConfig = Field(default_factory=SubdomainModuleConfig)
