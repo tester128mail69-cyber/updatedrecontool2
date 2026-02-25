@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -43,7 +43,7 @@ class BugReport:
     cvss_vector: str = ""
     remediation: str = ""
     references: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     platform: str = "hackerone"
 
     def to_hackerone_format(self) -> Dict[str, Any]:
