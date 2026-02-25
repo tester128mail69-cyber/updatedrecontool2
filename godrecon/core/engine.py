@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from godrecon.core.checkpoint import save_checkpoint
 from godrecon.core.config import Config, load_config
+from godrecon.core.rate_limiter import RateLimiter
 from godrecon.core.scheduler import Priority, Scheduler, Task
 from godrecon.core.scope import ScopeManager
 from godrecon.utils.logger import get_logger
@@ -102,6 +103,11 @@ class ScanEngine:
         self._failure_counts: Dict[str, int] = {}
         self._circuit_open: Set[str] = set()
         self._skip_modules: Set[str] = skip_modules or set()
+        # Rate limiter: shared across all HTTP-based modules
+        rate = self.config.general.rate_limit
+        self._rate_limiter: Optional[RateLimiter] = (
+            RateLimiter(max_requests_per_second=rate) if rate > 0 else None
+        )
 
     # ------------------------------------------------------------------
     # Public API
@@ -303,6 +309,14 @@ class ScanEngine:
         await self._emit({"event": "module_started", "module": module.name})
         module_timeout = self.config.general.module_timeout
         try:
+            # Acquire a rate-limit token before executing the module.
+            # This gates the start of each module, effectively controlling
+            # how many modules begin per second.  Individual HTTP requests
+            # within modules are bounded by the concurrency scheduler; for
+            # per-request rate limiting, configure AsyncHTTPClient.rate_limit
+            # in each module directly.
+            if self._rate_limiter is not None:
+                await self._rate_limiter.acquire()
             coro = module.run(self.target, self.config)
             if module_timeout > 0:
                 module_result = await asyncio.wait_for(coro, timeout=module_timeout)
