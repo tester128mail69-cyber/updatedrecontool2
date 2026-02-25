@@ -7,7 +7,7 @@ name = "godrecon"
 version = "1.0.0"
 description = "The Ultimate Automated Reconnaissance & Vulnerability Scanner for Bug Bounty Hunters"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "nothingmch69"}
@@ -17,7 +17,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -68,3 +67,9 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+include = ["godrecon*"]
+
+[tool.setuptools.package-data]
+godrecon = ["*.yaml", "*.yml"]
