@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  godrecon:
+    build: .
+    container_name: godrecon
+    volumes:
+      - ./output:/app/output
+      - ./config.yaml:/app/config.yaml
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    entrypoint: ["python", "main.py"]
+    command: ["--help"]

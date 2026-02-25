@@ -1,0 +1,249 @@
+general:
+  threads: 50
+  timeout: 10
+  retries: 3
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0"
+  proxy: null
+  output_dir: "./output"
+  output_format: "json"
+
+dns:
+  resolvers:
+    - "8.8.8.8"
+    - "8.8.4.4"
+    - "1.1.1.1"
+  timeout: 5
+
+modules:
+  subdomains: true
+  dns: true
+  http_probe: true
+  ports: true
+  tech: true
+  osint: true
+  takeover: true
+  cloud: true
+  vulns: true
+  crawl: false
+  ssl: true
+  email_sec: true
+  screenshots: true
+  api_intel: true
+  content_discovery: true
+  network: true
+
+subdomains:
+  enabled: true
+  sources:
+    - all
+  bruteforce:
+    enabled: true
+    wordlist: "wordlists/subdomains-large.txt"
+    concurrency: 500
+  permutation:
+    enabled: false
+  recursive:
+    enabled: false
+    depth: 2
+  timeout_per_source: 30
+
+dns_module:
+  enabled: true
+  resolve_all_types: true
+  check_dnssec: true
+  attempt_zone_transfer: true
+  check_security: true
+  email_security: true
+  passive_dns: true
+  dkim_selectors:
+    - default
+    - google
+    - selector1
+    - selector2
+    - k1
+    - k2
+    - dkim
+    - mail
+    - email
+    - s1
+    - s2
+    - mandrill
+    - amazonses
+    - cm
+    - protonmail
+    - zoho
+  doh_enabled: false
+  doh_server: "https://cloudflare-dns.com/dns-query"
+
+api_keys:
+  shodan: ""
+  censys_id: ""
+  censys_secret: ""
+  virustotal: ""
+  securitytrails: ""
+  binaryedge: ""
+  hunter: ""
+  github: ""
+  fullhunt: ""
+
+reporting:
+  auto_report: true
+  format: "html"
+  include_screenshots: true
+
+http_probe:
+  enabled: true
+  ports: [80, 443, 8080, 8443, 8000, 8888, 3000, 5000]
+  concurrency: 100
+  timeout: 10
+  follow_redirects: true
+  max_redirects: 5
+  check_security_headers: true
+  check_cors: true
+
+tech_detection:
+  enabled: true
+  detect_cms: true
+  detect_waf: true
+  detect_cdn: true
+  detect_frameworks: true
+  favicon_hash: true
+  jarm: true
+
+ssl_analysis:
+  enabled: true
+  check_ciphers: true
+  check_vulnerabilities: true
+  check_certificate: true
+  check_protocols: true
+  grade: true
+
+port_scan:
+  enabled: true
+  scan_type: "top100"  # top100, top1000, custom, full
+  custom_ports: []
+  concurrency: 500
+  timeout: 3
+  banner_grab: true
+  service_detection: true
+
+content_discovery:
+  enabled: true
+  wordlist: "wordlists/directories.txt"
+  concurrency: 50
+  status_codes: [200, 201, 301, 302, 307, 401, 403]
+  recursive: false
+  recursive_depth: 2
+  check_sensitive_files: true
+  check_backups: true
+  timeout: 10
+
+takeover:
+  enabled: true
+  verify: true
+  check_all_subdomains: true
+
+osint:
+  enabled: true
+  whois: true
+  social_media: true
+  google_dorks: true
+  metadata_extraction: true
+
+cloud:
+  enabled: true
+  check_aws: true
+  check_azure: true
+  check_gcp: true
+  bucket_bruteforce: true
+  bucket_permutations: 10
+
+crawl:
+  enabled: true
+  max_depth: 3
+  max_pages: 100
+  respect_robots: true
+  extract_forms: true
+  analyze_js: true
+  follow_redirects: true
+
+api_intel:
+  enabled: true
+  discover_endpoints: true
+  check_security: true
+  check_graphql: true
+
+vulns:
+  enabled: true
+  cve_lookup: true
+  pattern_matching: true
+  posture_scoring: true
+  max_cve_results: 20
+  safe_mode: true
+  severity_threshold: "info"
+
+network:
+  enabled: true
+  traceroute: true
+  cdn_bypass: true
+  geolocation: true
+  asn_lookup: true
+  topology: true
+  max_traceroute_hops: 30
+  origin_subdomain_check: true
+
+visual:
+  enabled: true
+  screenshots: true
+  similarity: true
+  concurrency: 5
+  timeout: 15
+  viewport_width: 1280
+  viewport_height: 720
+  output_dir: "output/screenshots"
+
+api:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8000
+  api_key: ""
+  cors_origins:
+    - "*"
+  max_concurrent_scans: 3
+
+monitoring:
+  enabled: true
+  storage_dir: "./output/monitoring"
+  max_history: 100
+
+notifications:
+  slack:
+    enabled: false
+    webhook_url: ""
+  discord:
+    enabled: false
+    webhook_url: ""
+  telegram:
+    enabled: true
+    bot_token: ""
+    chat_id: ""
+  email:
+    enabled: false
+    smtp_host: ""
+    smtp_port: 587
+    smtp_user: ""
+    smtp_pass: ""
+    from_addr: ""
+    to_addrs: []
+  webhook:
+    enabled: false
+    url: ""
+    headers: {}
+
+dashboard:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8000
