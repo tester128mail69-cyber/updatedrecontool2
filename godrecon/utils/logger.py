@@ -22,6 +22,7 @@ def configure_logging(
     level: int = logging.INFO,
     log_file: Optional[str] = None,
     verbose: bool = False,
+    quiet: bool = False,
 ) -> None:
     """Configure the root logger used by all GODRECON components.
 
@@ -29,11 +30,14 @@ def configure_logging(
         level: Base log level (e.g. ``logging.DEBUG``).
         log_file: Optional filesystem path for a persistent log file.
         verbose: When ``True``, forces ``DEBUG`` level.
+        quiet: When ``True``, forces ``ERROR`` level (suppresses all but errors).
     """
     global _file_handler, _root_configured
 
     if verbose:
         level = logging.DEBUG
+    elif quiet:
+        level = logging.ERROR
 
     root = logging.getLogger("godrecon")
     root.setLevel(level)
