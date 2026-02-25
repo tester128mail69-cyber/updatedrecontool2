@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "godrecon"
 version = "0.2.0"
-description = "The Ultimate Cybersecurity Reconnaissance Tool — async-first, modular, extensible"
+description = "The Ultimate Automated Reconnaissance & Vulnerability Scanner for Bug Bounty Hunters"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "nothingmch69tester2mail69-afk"}
+    {name = "nothingmch69"}
 ]
 keywords = ["cybersecurity", "reconnaissance", "pentesting", "subdomain", "scanner"]
 classifiers = [
@@ -47,9 +47,9 @@ dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0", "pytest-cov>=4.1.0"]
 godrecon = "godrecon.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/nothingmch69tester2mail69-afk/recon"
-Repository = "https://github.com/nothingmch69tester2mail69-afk/recon"
-Issues = "https://github.com/nothingmch69tester2mail69-afk/recon/issues"
+Homepage = "https://github.com/tester122mail69-netizen/recon1"
+Repository = "https://github.com/tester122mail69-netizen/recon1"
+Issues = "https://github.com/tester122mail69-netizen/recon1/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

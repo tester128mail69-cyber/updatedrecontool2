@@ -1,8 +1,4 @@
-# GODRECON — The Ultimate Cybersecurity Reconnaissance Tool
-
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-beta-blue.svg)]()
+# GODRECON
 
 ```
  ██████╗  ██████╗ ██████╗ ██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗
@@ -11,320 +7,292 @@
 ██║   ██║██║   ██║██║  ██║██╔══██╗██╔══╝  ██║     ██║   ██║██║╚██╗██║
 ╚██████╔╝╚██████╔╝██████╔╝██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
  ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝
+                          by nothingmch69
 ```
 
-> **The only recon tool you'll ever need.**
-> Async-first, modular, extensible, and blazing fast.
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/tester122mail69-netizen/recon1?style=social)](https://github.com/tester122mail69-netizen/recon1/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/tester122mail69-netizen/recon1)](https://github.com/tester122mail69-netizen/recon1/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+> **The Ultimate Automated Reconnaissance & Vulnerability Scanner for Bug Bounty Hunters**
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Scan Modes](#scan-modes)
+- [CLI Reference](#cli-reference)
+- [API Keys Setup](#api-keys-setup)
+- [Dashboard Guide](#dashboard-guide)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
 ## Features
 
-- **Subdomain Enumeration** — Brute-force, passive DNS, certificate transparency
-- **DNS Intelligence** — All record types (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA)
-- **HTTP Probing** — Status codes, response times, redirect chains, technology detection
-- **Port Scanning** — Fast async TCP port scanning with banner grabbing
-- **Vulnerability Detection** — CVE correlation, misconfiguration checks
-- **Subdomain Takeover** — Detect dangling DNS records pointing to unclaimed services
-- **Cloud Asset Discovery** — S3 buckets, Azure blobs, GCP storage, CloudFront
-- **SSL/TLS Analysis** — Certificate transparency, cipher suites, expiry dates
-- **Email Security** — SPF, DKIM, DMARC misconfiguration detection
-- **Screenshots** — Automated web screenshots for discovered assets
-- **OSINT Integration** — Shodan, Censys, VirusTotal, SecurityTrails, BinaryEdge
-- **AI-Powered** — ML-based false positive filtering and risk scoring (Phase 2)
-- **Beautiful Reports** — HTML, PDF, JSON, CSV, Markdown output formats
-- **Rich CLI** — Colourised output with progress bars, tables, and ASCII art
+### Scanner Features (32+)
 
----
+| Feature | Description |
+|---------|-------------|
+| **Subdomain Enumeration** | 38+ sources — Subfinder, Amass, Assetfinder, Findomain, Chaos, crt.sh, SecurityTrails, Shodan, Censys, VirusTotal, BufferOver, AlienVault, Wayback, CommonCrawl, RapidDNS, Riddler, ThreatCrowd, HackerTarget, DNSDumpster, GitHub Code Search, and more |
+| **Subdomain Supercharger** | DNS brute-force, permutation engine, recursive enumeration, AXFR zone transfer, TLS cert scraping, reverse DNS, NOERROR enumeration, favicon hash matching, SPF/TXT mining |
+| **Port Scanning** | Full 65535-port or top-ports scan with banner grabbing |
+| **Technology Fingerprinting** | Detect frameworks, servers, CMSs, and libraries |
+| **WAF Detection & Bypass** | Cloudflare, Akamai, AWS WAF, Sucuri, Imperva, ModSecurity, F5 |
+| **Vulnerability Detection P1–P5** | SQLi, RCE, SSRF, XSS, LFI/RFI, XXE, SSTI, IDOR, CSRF, CORS, Open Redirect, Command Injection, Deserialization, JWT attacks, GraphQL injection, and more |
+| **JS Secrets Scanner** | 16 regex patterns + entropy analysis |
+| **GitHub/GitLab Dorking** | Automated code search for secrets and sensitive data |
+| **Nuclei Integration** | 8000+ community templates |
+| **Out-of-Band (OOB) Detection** | Blind SSRF, XSS, SQLi, XXE, RCE |
+| **Authenticated Scanning** | Cookie, token, and custom header injection |
+| **Smart Parameter Discovery** | Automatic parameter enumeration and fuzzing |
+| **Auto Vulnerability Chaining** | Detects and chains multi-step exploits |
+| **Cloud Misconfiguration Scanner** | S3, Azure Blob, GCP, Firebase, Kubernetes, Docker |
+| **Passive Recon** | Shodan, Censys, SecurityTrails, VirusTotal |
+| **Mobile API Endpoint Extractor** | APK decompilation and endpoint extraction |
+| **Broken Authentication Scanner** | Session, token, and auth flow testing |
+| **Wayback Machine Deep Mining** | Historical URL and parameter extraction |
+| **Business Logic Flaw Detection** | Workflow and logic vulnerability testing |
+| **Cache Poisoning Scanner** | Web cache poisoning detection |
+| **Browser Extension Analyzer** | Extension security analysis |
+| **Multi-Region Scanning** | Scan from multiple geographic locations |
+| **Supply Chain Analysis** | Dependency and third-party risk analysis |
+| **Email Security** | SPF/DKIM/DMARC misconfiguration detection |
+| **DNS Analysis** | Full DNS intelligence (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA) |
+| **SSL/TLS Analysis** | Certificate transparency, cipher suites, expiry |
+| **Bug Bounty Program Auto-Matcher** | Automatically match findings to bounty programs |
+| **AI-Powered Vulnerability Validation** | OpenAI, Claude, Gemini, Ollama, Pattern-based |
+| **Smart Priority Scoring** | 0–100 confidence scoring with false-positive filtering |
+| **Auto Bug Report Generator** | HackerOne, Bugcrowd, Markdown, PDF formats |
+| **Scan Diffing** | Compare two scans to detect new findings |
+| **Continuous Monitoring with Alerts** | Slack, Discord, Telegram, Webhook notifications |
 
-## Quick Install
+### Dashboard Features (70)
 
-### pip (recommended)
+<details>
+<summary>Click to expand all 70 dashboard features</summary>
 
-```bash
-pip install -r requirements.txt
-python main.py --help
-```
+**Core Features**
+- Live scan progress with real-time updates
+- Multi-target management
+- Scan history and result storage
+- REST API with OpenAPI docs
 
-### Docker
+**Visual & UX**
+- Dark/light theme toggle
+- Responsive sidebar navigation
+- Global search (Ctrl+K)
+- Toast notifications
+- Rich data tables with sorting/filtering
 
-```bash
-docker-compose build
-docker-compose run godrecon scan --target example.com
-```
+**Productivity**
+- Kanban-style findings board
+- Bulk actions on findings
+- CSV/JSON/HTML/PDF export
+- Report generation wizard
+- Scheduled scan management
 
----
+**Analytics**
+- Findings severity breakdown
+- Subdomain growth over time
+- Vulnerability trend charts
+- Module performance metrics
+- Leaderboard view
 
-## Supported Platforms
+**Security**
+- API key authentication
+- CORS configuration
+- Rate limiting
+- Audit log / activity feed
 
-| OS | Supported | Notes |
-|----|-----------|-------|
-| **Linux** (Ubuntu 20.04+, Kali, Debian, Fedora, Arch) | ✅ Recommended | Best performance, full feature support |
-| **macOS** (12 Monterey+) | ✅ Full Support | Install via Homebrew for Python 3.10+ |
-| **Windows 10/11** | ✅ Full Support | Use PowerShell or WSL2 recommended |
-| **Docker** (any OS) | ✅ Full Support | Easiest cross-platform option |
+**WOW Factor**
+- Attack surface visualization
+- Interactive findings timeline
+- AI validation panel
+- Bug bounty matcher
+- Secrets explorer
 
-### Requirements
-- **Python 3.10+** (required)
-- **pip** (comes with Python)
-- **Playwright** (optional, for screenshots): `pip install playwright && playwright install chromium`
+**Scanner Panels**
+- Subdomain enumeration panel
+- Vulnerability findings panel
+- Port scan results
+- Technology fingerprint view
+- Cloud misconfiguration panel
 
----
+**Power Features**
+- Scan diffing view
+- Continuous monitoring dashboard
+- Alert management
+- Webhook configuration
+- Multi-region scan control
 
-## Installation & Setup
-
-### Linux (Ubuntu/Debian/Kali)
-```bash
-# 1. Install Python 3.10+ if not already installed
-sudo apt update && sudo apt install -y python3 python3-pip python3-venv git
-
-# 2. Clone the repo
-git clone https://github.com/nothingmch69tester2mail69-afk/recon.git
-cd recon
-
-# 3. Create virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate
-
-# 4. Install dependencies
-pip install -r requirements.txt
-
-# 5. (Optional) Install Playwright for screenshots
-pip install playwright && playwright install chromium
-
-# 6. Run GODRECON
-python main.py scan --target example.com
-```
-
-### macOS
-```bash
-# 1. Install Python via Homebrew
-brew install python@3.12 git
-
-# 2. Clone and setup
-git clone https://github.com/nothingmch69tester2mail69-afk/recon.git
-cd recon
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# 3. Run
-python main.py scan --target example.com
-```
-
-### Windows
-```powershell
-# 1. Install Python 3.10+ from python.org (check "Add to PATH")
-# 2. Open PowerShell
-
-git clone https://github.com/nothingmch69tester2mail69-afk/recon.git
-cd recon
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# Run
-python main.py scan --target example.com
-```
-
-### Docker (Any OS)
-```bash
-git clone https://github.com/nothingmch69tester2mail69-afk/recon.git
-cd recon
-docker-compose build
-docker-compose run godrecon scan --target example.com
-```
+</details>
 
 ---
 
 ## Quick Start
 
 ```bash
-# Basic subdomain scan
+# Clone
+git clone https://github.com/tester122mail69-netizen/recon1.git
+cd recon1
+
+# Install
+pip install -r requirements.txt
+
+# Run your first scan
 python main.py scan --target example.com
 
-# Full scan with HTML report
-python main.py scan --target example.com --full --format html -o report.html
-
-# Subdomains only, verbose
-python main.py scan --target example.com --subs-only --verbose
-
-# With proxy and custom threads
-python main.py scan --target example.com --proxy http://127.0.0.1:8080 --threads 100
-
-# Silent mode for scripting
-python main.py scan --target example.com --silent --format json -o results.json
-```
-
----
-
-## 📖 Full Documentation
-
-For the complete guide on installation, configuration, all scan commands, REST API, dashboard, monitoring, and troubleshooting, see **[USAGE.md](USAGE.md)**.
-
----
-
-## 🖥️ Web Dashboard & API
-
-```bash
-# Start the server
+# Launch dashboard
 python main.py api
-
-# Dashboard: http://127.0.0.1:8000/dashboard/
-# API Docs:  http://127.0.0.1:8000/docs
-```
-
-## 📡 Continuous Monitoring
-
-```bash
-# Schedule daily scans with Slack alerts
-python main.py monitor add --target example.com --interval daily --notify slack
-
-# Start monitoring daemon
-python main.py monitor run
-```
-
-## 🐳 Docker
-
-```bash
-# Build and run
-docker-compose build
-docker-compose run godrecon scan --target example.com --full
-
-# Start API + Dashboard
-docker-compose run -p 8000:8000 godrecon api --host 0.0.0.0
-
-# Results saved to ./output/
+# Then open http://127.0.0.1:8000/dashboard/
 ```
 
 ---
 
-## Usage Examples
+## Scan Modes
+
+| Mode | Duration | What it does | Command |
+|------|----------|-------------|---------|
+| **Quick Scan** | 30–45 min | Subdomains + top vulns + secrets | `python main.py scan --target example.com --mode quick` |
+| **Standard Scan** | 1.5–2.5 hrs | Everything except fuzzing + OOB + full Nuclei | `python main.py scan --target example.com` |
+| **Deep Scan / GOD MODE** | 4–6 hrs | EVERYTHING enabled, no timeouts | `python main.py scan --target example.com --deep` |
+| **Continuous Mode** | 24/7 | Rescans on schedule, alerts on new findings | `python main.py monitor example.com --interval daily` |
 
 ```bash
-# Run only subdomain enumeration
-python main.py scan --target example.com --modules subdomains
+# Quick Scan — fast recon
+python main.py scan --target example.com --mode quick
 
-# Port scan with banner grabbing
-python main.py scan --target example.com --modules ports --verbose
+# Standard Scan — balanced coverage
+python main.py scan --target example.com --format html -o report.html
 
-# SSL/TLS analysis only
-python main.py scan --target example.com --modules ssl
+# Deep Scan — maximum coverage
+python main.py scan --target example.com --deep --oob --fuzzing --nuclei
 
-# OSINT gathering
-python main.py scan --target example.com --modules osint
-
-# Check for subdomain takeovers
-python main.py scan --target example.com --modules takeover
-
-# Cloud asset discovery (S3, Azure, GCP)
-python main.py scan --target example.com --modules cloud
-
-# Vulnerability scan with CVE lookup
-python main.py scan --target example.com --modules vulns
-
-# Web crawl with JS analysis
-python main.py scan --target example.com --modules crawl
-
-# Full scan, all modules, JSON output
-python main.py scan --target example.com --full --format json -o results.json
-
-# Start the REST API server
-python main.py api --host 127.0.0.1 --port 8000
+# Continuous Monitoring — daily rescans with Slack alerts
+python main.py monitor example.com --interval daily --notify slack
 ```
 
 ---
 
 ## CLI Reference
 
-```
-godrecon scan [OPTIONS]
+### `godrecon scan`
 
-Options:
-  -t, --target TEXT        Target domain, IP, or CIDR  [required]
-  --full                   Run all modules
-  --subs-only              Subdomain enumeration only
-  --ports                  Enable port scanning
-  --screenshots            Enable screenshots
-  -o, --output PATH        Output file path
-  -f, --format TEXT        Output format: json/csv/html/pdf/md [default: json]
-  --threads INT            Concurrency level [default: 50]
-  --timeout INT            Request timeout in seconds [default: 10]
-  --proxy TEXT             Proxy URL (http/socks5)
-  --silent                 Minimal output
-  -v, --verbose            Verbose output
-  --config PATH            Custom config file path
-  --help                   Show this message and exit
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--target` | Target domain, IP, or CIDR **(required)** | `--target example.com` |
+| `--full` | Run all modules | `--full` |
+| `--deep` | Deep scan mode — exhaustive, no timeouts | `--deep` |
+| `--mode` | Scan mode: `quick`, `standard`, `deep`, `continuous` | `--mode quick` |
+| `--subs-only` | Subdomain enumeration only | `--subs-only` |
+| `--ports` | Enable port scanning | `--ports` |
+| `--screenshots` | Enable screenshots | `--screenshots` |
+| `--nuclei/--no-nuclei` | Run Nuclei templates (default: on) | `--no-nuclei` |
+| `--oob` | Enable OOB detection | `--oob` |
+| `--fuzzing` | Enable fuzzing engine | `--fuzzing` |
+| `--waf-bypass` | Enable WAF bypass techniques | `--waf-bypass` |
+| `--auth-cookie` | Session cookie for authenticated scanning | `--auth-cookie session=abc123` |
+| `--auth-token` | Bearer token for authenticated scanning | `--auth-token eyJ...` |
+| `--auth-header` | Custom auth header | `--auth-header X-API-Key=secret` |
+| `--ai-provider` | AI validation provider: `pattern`, `openai`, `anthropic`, `gemini`, `ollama` | `--ai-provider openai` |
+| `--passive-recon/--no-passive-recon` | Enable passive recon (default: on) | `--passive-recon` |
+| `--wayback/--no-wayback` | Enable Wayback Machine mining (default: on) | `--wayback` |
+| `--cache-poisoning/--no-cache-poisoning` | Enable cache poisoning scanner (default: on) | `--cache-poisoning` |
+| `--js-secrets/--no-js-secrets` | Enable JS secrets scanning (default: on) | `--js-secrets` |
+| `--git-dork` | Enable GitHub/GitLab dorking | `--git-dork` |
+| `--output` / `-o` | Output file path | `-o report.html` |
+| `--format` / `-f` | Output format: `json`, `csv`, `html`, `pdf`, `md` | `-f html` |
+| `--threads` | Concurrency level (default: 50) | `--threads 100` |
+| `--min-confidence` | Minimum confidence threshold 0.0–1.0 (default: 0.5) | `--min-confidence 0.7` |
+| `--verify/--no-verify` | Cross-validation pass | `--verify` |
+| `--resume` | Resume interrupted scan | `--resume` |
 
-godrecon config [OPTIONS]
-  --show                   Print current configuration
-  --config PATH            Config file path
-
-godrecon version
-  Show GODRECON version information
-```
-
----
-
-## Configuration
-
-Edit `config.yaml` to configure GODRECON:
-
-```yaml
-general:
-  threads: 50        # Concurrent tasks
-  timeout: 10        # Request timeout (seconds)
-  retries: 3         # Retry attempts
-  proxy: null        # Optional proxy URL
-  output_dir: ./output
-
-dns:
-  resolvers:
-    - "8.8.8.8"
-    - "8.8.4.4"
-    - "1.1.1.1"
-
-modules:
-  subdomains: true
-  dns: true
-  ports: false       # Disabled by default
-  screenshots: false # Disabled by default
-
-api_keys:
-  shodan: ""
-  virustotal: ""
-```
-
-Environment variable overrides follow the pattern `GODRECON__<SECTION>__<KEY>`:
+### Other Commands
 
 ```bash
-export GODRECON__GENERAL__THREADS=100
-export GODRECON__API_KEYS__SHODAN=your-key-here
+# Start the API server + dashboard
+godrecon api --host 0.0.0.0 --port 8000
+
+# Generate bug bounty report from scan JSON
+godrecon report scan.json --format hackerone -o report
+
+# Compare two scans
+godrecon diff scan1.json scan2.json
+
+# Manage monitoring schedules
+godrecon schedules list
+godrecon schedules add --target example.com --interval daily
+
+# Show version
+godrecon version
 ```
 
 ---
 
-## Module List
+## API Keys Setup
 
-| Module | Category | Status |
-|--------|----------|--------|
-| `subdomains` | Discovery | ✅ Active |
-| `dns` | DNS Intelligence | ✅ Active |
-| `http_probe` | HTTP Probing | ✅ Active |
-| `ports` | Port Scanning | ✅ Active |
-| `tech` | Tech Detection | ✅ Active |
-| `osint` | OSINT | ✅ Active |
-| `takeover` | Subdomain Takeover | ✅ Active |
-| `cloud` | Cloud Security | ✅ Active |
-| `vulns` | Vulnerability Detection | ✅ Active |
-| `ssl` | SSL/TLS Analysis | ✅ Active |
-| `email_sec` | Email Security | ✅ Active |
-| `screenshots` | Visual Recon | ✅ Active |
-| `api_intel` | API Intelligence | ✅ Active |
-| `crawl` | Web Crawling | ✅ Active |
-| `content_discovery` | Content Discovery | ✅ Active |
-| `network` | Network Intelligence | ✅ Active |
-| `visual` | Visual Recon | ✅ Active |
+All API keys are **optional** — GODRECON works without them. Keys unlock additional data sources.
+
+| Key | Where to Get | Free Tier | What it Enables |
+|-----|-------------|-----------|-----------------|
+| **Shodan** | [shodan.io/register](https://account.shodan.io/register) | 100 queries/month | Port data, banners, CVEs |
+| **Censys** | [censys.io/register](https://censys.io/register) | 250 queries/month | Host data, certificates |
+| **SecurityTrails** | [securitytrails.com](https://securitytrails.com/app/account) | 50 queries/month | Historical DNS, subdomains |
+| **VirusTotal** | [virustotal.com](https://www.virustotal.com/gui/join-us) | 500 req/day | Subdomain data, malware info |
+| **OpenAI** | [platform.openai.com](https://platform.openai.com/signup) | $5 free credit | AI vulnerability validation |
+| **Anthropic (Claude)** | [console.anthropic.com](https://console.anthropic.com) | $5 free credit | AI vulnerability validation |
+| **Google (Gemini)** | [aistudio.google.com](https://aistudio.google.com) | Free tier available | AI vulnerability validation |
+| **Chaos (ProjectDiscovery)** | [chaos.projectdiscovery.io](https://chaos.projectdiscovery.io) | Free for researchers | Bug bounty subdomain data |
+| **GitHub Token** | [github.com/settings/tokens](https://github.com/settings/tokens) | Free | GitHub dorking, code search |
+
+Add keys to `config.yaml`:
+
+```yaml
+api_keys:
+  shodan: "your-shodan-key"
+  censys_id: "your-censys-app-id"
+  censys_secret: "your-censys-secret"
+  securitytrails: "your-st-key"
+  virustotal: "your-vt-key"
+  openai: "sk-..."
+  anthropic: "sk-ant-..."
+  github_token: "ghp_..."
+```
+
+---
+
+## Dashboard Guide
+
+```bash
+# Start the server
+python main.py api
+
+# Open in browser
+# Dashboard: http://127.0.0.1:8000/dashboard/
+# API Docs:  http://127.0.0.1:8000/docs
+```
+
+The dashboard provides a full web UI with 70 features across:
+
+- **Scans** — Start scans, view progress, browse history
+- **Findings** — All vulnerabilities sorted by severity
+- **Subdomains** — Complete subdomain enumeration results
+- **Vulnerabilities** — P1–P5 vulnerability details
+- **Secrets** — JS secrets and leaked credentials
+- **Analytics** — Charts, trends, and statistics
+- **Reports** — Generate and download reports
+- **Targets** — Manage your target list
+- **Alerts** — Monitoring alerts and notifications
+- **Settings** — API keys, notifications, preferences
+
+See [docs/DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md) for the full guide.
 
 ---
 
@@ -332,55 +300,32 @@ export GODRECON__API_KEYS__SHODAN=your-key-here
 
 ```
 godrecon/
-├── __init__.py
-├── cli.py              # Typer + Rich CLI interface
-├── core/
-│   ├── engine.py       # Async scan orchestrator
-│   ├── config.py       # YAML configuration + env overrides + Pydantic models
-│   ├── scope.py        # Target & scope management
-│   └── scheduler.py    # Async task queue with priority/retry
-├── modules/
-│   ├── base.py         # BaseModule abstract class
-│   ├── subdomains/     # Subdomain enumeration (40+ sources)
-│   ├── dns/            # DNS intelligence + email security
-│   ├── http/           # HTTP probing + security headers + content discovery
-│   ├── ssl/            # SSL/TLS analysis
-│   ├── tech/           # Technology fingerprinting (99 signatures)
-│   ├── ports/          # Port scanning + banner grabbing
-│   ├── takeover/       # Subdomain takeover detection (102 fingerprints)
-│   ├── content_discovery/  # Directory/file brute-forcing
-│   ├── osint/          # WHOIS, social media, Google dorks, metadata
-│   ├── cloud/          # AWS S3, Azure Blob, GCP Storage enumeration
-│   ├── crawl/          # Web spider + form finder + JS analyzer
-│   ├── api_intel/      # API discovery + security checks
-│   ├── vulns/          # CVE lookup + pattern matching + posture scoring
-│   ├── network/        # Traceroute, CDN bypass, ASN, geolocation
-│   ├── visual/         # Visual reconnaissance
-│   └── screenshots/    # Screenshot capture
-├── ai/                 # Risk scoring & false-positive filtering
-├── api/                # FastAPI REST server
-├── dashboard/          # Web dashboard
-├── data/               # JSON databases (ports, services, fingerprints, templates)
-├── reporting/          # HTML/PDF/JSON/CSV/Markdown report generators
-└── utils/
-    ├── http_client.py  # Async HTTP with pooling, retry, UA rotation
-    ├── dns_resolver.py # Async DNS with caching, all record types
-    ├── logger.py       # Rich-based structured logging
-    └── helpers.py      # Utility functions
+├── ai/                  # AI validation (OpenAI, Claude, Gemini, Ollama, Pattern)
+├── api/                 # FastAPI server
+├── core/                # Engine, config, scheduler, verifier, PoC generator
+├── dashboard/           # 70-feature web dashboard
+│   ├── templates/       # Jinja2 HTML templates (33+ pages)
+│   ├── static/          # CSS, JS, assets
+│   └── routes.py        # 75 routes + 30 API endpoints
+├── modules/             # All scanner modules
+│   ├── subdomains/      # 38+ subdomain sources
+│   ├── vulns/           # P1-P5 vulnerability detectors
+│   ├── passive_recon/   # Shodan, Censys, SecurityTrails, VirusTotal
+│   ├── cloud_misconfig/ # S3, Azure, GCP, Firebase, K8s
+│   └── ...              # 20+ more module directories
+├── monitoring/          # Slack, Discord, Telegram notifications
+├── reporting/           # JSON, HTML, CSV, Markdown, PDF, Bug Reports
+├── utils/               # HTTP client, DNS resolver, auth client, helpers
+└── cli.py               # Typer + Rich CLI
 ```
 
----
-
-## Roadmap
-
-- ✅ **Phase 1**: Core framework, async engine, CLI, HTTP/DNS clients
-- ✅ **Phase 2**: Full module implementations, AI scoring, advanced reporting
-- ✅ **Phase 3**: REST API, web dashboard, continuous monitoring
-- 🔮 **Phase 4**: Plugin marketplace, CI/CD integrations, enterprise features
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical overview.
 
 ---
 
 ## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/my-module`)
@@ -392,6 +337,11 @@ godrecon/
 
 ## License
 
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+MIT License — Copyright © 2026 nothingmch69
 
-*Built with love for the security community.*
+See [LICENSE](LICENSE) for full text.
+
+---
+
+<p align="center">Made with ❤️ by <a href="https://github.com/nothingmch69">nothingmch69</a></p>
+
