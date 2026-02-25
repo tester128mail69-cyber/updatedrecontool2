@@ -111,7 +111,8 @@ def test_generate_markdown(tmp_path):
     assert output.exists()
     content = output.read_text()
     assert "GODRECON" in content
-    assert "example.com" in content
+    # Verify the target appears in the report (as a code block or header value)
+    assert content.count("example.com") >= 1
 
 
 def test_generate_markdown_via_generate(tmp_path):
@@ -140,7 +141,8 @@ def test_generate_html(tmp_path):
     assert output.exists()
     content = output.read_text()
     assert "GODRECON" in content
-    assert "example.com" in content
+    # Verify the target appears in the report body
+    assert content.count("example.com") >= 1
     assert "<html" in content.lower()
 
 
