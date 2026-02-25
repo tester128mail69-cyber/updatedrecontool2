@@ -69,6 +69,15 @@ function initNotifications() {
   document.addEventListener("click", function(e) {
     if (!panel.contains(e.target) && e.target !== btn) panel.classList.remove("open");
   });
+  const list = document.getElementById("notifList");
+  if (list) {
+    list.addEventListener("click", function(e) {
+      const item = e.target.closest(".notif-item");
+      if (item && item.dataset.notifId) {
+        markNotifRead(item.dataset.notifId);
+      }
+    });
+  }
   loadNotifications();
 }
 
@@ -94,9 +103,9 @@ function renderNotifications() {
     return;
   }
   list.innerHTML = _notifications.slice(0, 20).map(n => `
-    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead('${n.id}')">
+    <div class="notif-item ${n.read ? '' : 'unread'}" data-notif-id="${escHtml(n.id)}">
       <div class="notif-item-title">${escHtml(n.title)}</div>
-      <div class="notif-item-time">${n.time || ''}</div>
+      <div class="notif-item-time">${escHtml(n.time || '')}</div>
     </div>
   `).join("");
 }
