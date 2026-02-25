@@ -374,3 +374,7 @@ supply_chain:
 plugins:
   enabled: true
   plugin_dir: "~/.godrecon/plugins"
+
+scheduler:
+  enabled: true
+  db_path: "~/.godrecon/scheduler.db"

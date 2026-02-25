@@ -671,6 +671,13 @@ class PluginsConfig(BaseModel):
     plugin_dir: str = "~/.godrecon/plugins"
 
 
+class SchedulerConfig(BaseModel):
+    """Cron-based scan scheduler configuration."""
+
+    enabled: bool = True
+    db_path: str = "~/.godrecon/scheduler.db"
+
+
 class Config(BaseModel):
     """Top-level GODRECON configuration."""
 
@@ -728,6 +735,7 @@ class Config(BaseModel):
         default_factory=SubdomainSuperchargerConfig
     )
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
+    scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
 
 
 def load_config(config_path: Optional[str] = None) -> Config:

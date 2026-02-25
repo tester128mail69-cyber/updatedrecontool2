@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -660,6 +661,122 @@ def report(
         Path(output_path).write_text(content)
 
     console.print(f"[green]Generated {len(reports)} report(s) → {output_path}[/]")
+
+
+# ---------------------------------------------------------------------------
+# schedule command group (cron-based ScanScheduler)
+# ---------------------------------------------------------------------------
+
+schedule_app = typer.Typer(
+    name="schedule",
+    help="[bold]Manage cron-based recurring scans (SQLite-backed).[/]",
+    no_args_is_help=True,
+)
+app.add_typer(schedule_app, name="schedule")
+
+
+@schedule_app.command("add")
+def schedule_add(
+    target: str = typer.Option(..., "--target", "-t", help="Target domain/IP to scan"),
+    cron: str = typer.Option(..., "--cron", help='Cron expression, e.g. "0 2 * * *"'),
+    config_file: Optional[str] = typer.Option(None, "--config", help="Custom config file"),
+) -> None:
+    """Add a new cron-scheduled recurring scan.
+
+    Example:
+
+        godrecon schedule add --target example.com --cron "0 2 * * *"
+    """
+    from godrecon.core.scheduler import ScanScheduler
+
+    cfg = load_config(config_file)
+    db_path = cfg.scheduler.db_path if cfg.scheduler.enabled else None
+    try:
+        scheduler = ScanScheduler(db_path=db_path)
+        job = scheduler.add(target, cron)
+    except ValueError as exc:
+        err_console.print(f"[red]Error: {exc}[/]")
+        raise typer.Exit(1)
+
+    console.print(
+        f"[bold green]✓[/] Scheduled [bold]{target}[/] with cron [bold]{cron!r}[/] "
+        f"(id=[dim]{job.job_id}[/])"
+    )
+
+
+@schedule_app.command("list")
+def schedule_list(
+    config_file: Optional[str] = typer.Option(None, "--config", help="Custom config file"),
+) -> None:
+    """List all cron-scheduled scans.
+
+    Example:
+
+        godrecon schedule list
+    """
+    from godrecon.core.scheduler import ScanScheduler
+
+    cfg = load_config(config_file)
+    db_path = cfg.scheduler.db_path if cfg.scheduler.enabled else None
+    scheduler = ScanScheduler(db_path=db_path)
+    jobs = scheduler.list_jobs()
+
+    if not jobs:
+        console.print("[dim]No scheduled jobs configured.[/]")
+        return
+
+    table = Table(title="Scheduled Scans", border_style="dim")
+    table.add_column("ID", style="dim", no_wrap=True)
+    table.add_column("Target", style="bold")
+    table.add_column("Cron")
+    table.add_column("Next Run (UTC)")
+    table.add_column("Last Run (UTC)")
+    table.add_column("Enabled")
+
+    for job in jobs:
+        next_str = (
+            datetime.fromtimestamp(job.next_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+            if job.next_run
+            else "—"
+        )
+        last_str = (
+            datetime.fromtimestamp(job.last_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+            if job.last_run
+            else "—"
+        )
+        table.add_row(
+            job.job_id[:8] + "…",
+            job.target,
+            job.cron_expr,
+            next_str,
+            last_str,
+            "[green]Yes[/]" if job.enabled else "[red]No[/]",
+        )
+    console.print(table)
+
+
+@schedule_app.command("remove")
+def schedule_remove(
+    job_id: str = typer.Option(..., "--id", help="Job ID to remove"),
+    config_file: Optional[str] = typer.Option(None, "--config", help="Custom config file"),
+) -> None:
+    """Remove a scheduled scan by its job ID.
+
+    Example:
+
+        godrecon schedule remove --id <job_id>
+    """
+    from godrecon.core.scheduler import ScanScheduler
+
+    cfg = load_config(config_file)
+    db_path = cfg.scheduler.db_path if cfg.scheduler.enabled else None
+    scheduler = ScanScheduler(db_path=db_path)
+
+    if scheduler.remove(job_id):
+        console.print(f"[bold green]✓[/] Job [dim]{job_id}[/] removed.")
+    else:
+        err_console.print(f"[red]Job {job_id!r} not found.[/]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
