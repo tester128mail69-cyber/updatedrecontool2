@@ -254,7 +254,7 @@ class GeneralConfig(BaseModel):
     cross_validate: bool = False
     deep_scan: bool = False
     safe_mode: bool = True
-    rate_limit: int = 0
+    rate_limit: int = 10
     delay_between_requests: float = 0.0
     max_payload_tests: int = 10
     min_confidence: float = 0.5
