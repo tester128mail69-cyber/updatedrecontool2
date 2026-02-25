@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 _SERVER_START_TIME = time.time()
 
 try:
-    from fastapi import Depends, FastAPI, HTTPException, Path, status
+    from fastapi import Depends, FastAPI, HTTPException, Path, status, WebSocket, WebSocketDisconnect
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
     import uvicorn
@@ -326,6 +326,84 @@ try:
             """Cancel a running scan or delete a completed scan record."""
             if not scan_manager.delete(scan_id):
                 raise HTTPException(status_code=404, detail=f"Scan {scan_id!r} not found.")
+
+        # ------------------------------------------------------------------
+        # WebSocket — real-time scan progress (optional: requires websockets)
+        # ------------------------------------------------------------------
+
+        try:
+            import websockets as _ws_dep  # noqa: F401
+            import json as _json
+            from datetime import datetime as _dt, timezone as _tz
+
+            _POLL_INTERVAL = 0.5  # seconds between progress checks
+
+            @_app.websocket("/ws/scan/{scan_id}")
+            async def ws_scan_progress(
+                websocket: WebSocket,
+                scan_id: str,
+            ) -> None:
+                """Stream scan progress events in real-time via WebSocket.
+
+                Sends JSON messages as modules complete with the fields:
+                ``type``, ``module_name``, ``status``, and ``timestamp``
+                (ISO-8601 UTC).
+
+                Event types:
+
+                * ``module_complete`` — a module finished.
+                * ``scan_complete`` — the scan reached a terminal state.
+                * ``error`` — scan not found.
+                """
+                await websocket.accept()
+                try:
+                    record = scan_manager.get(scan_id)
+                    if record is None:
+                        await websocket.send_text(
+                            _json.dumps({
+                                "type": "error",
+                                "module_name": None,
+                                "status": "not_found",
+                                "timestamp": _dt.now(tz=_tz.utc).isoformat(),
+                            })
+                        )
+                        await websocket.close()
+                        return
+
+                    seen: set = set()
+                    terminal = {ScanStatus.COMPLETED, ScanStatus.FAILED, ScanStatus.CANCELLED}
+
+                    while True:
+                        for mod in record.modules_completed:
+                            if mod not in seen:
+                                seen.add(mod)
+                                await websocket.send_text(
+                                    _json.dumps({
+                                        "type": "module_complete",
+                                        "module_name": mod,
+                                        "status": record.status.value,
+                                        "timestamp": _dt.now(tz=_tz.utc).isoformat(),
+                                    })
+                                )
+
+                        if record.status in terminal:
+                            await websocket.send_text(
+                                _json.dumps({
+                                    "type": "scan_complete",
+                                    "module_name": None,
+                                    "status": record.status.value,
+                                    "timestamp": _dt.now(tz=_tz.utc).isoformat(),
+                                })
+                            )
+                            break
+
+                        await asyncio.sleep(_POLL_INTERVAL)
+
+                except WebSocketDisconnect:
+                    pass  # Client disconnected — nothing to do
+
+        except ImportError:
+            pass  # websockets not installed — WebSocket endpoint disabled
 
         return _app
 
